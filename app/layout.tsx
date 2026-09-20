@@ -8,9 +8,9 @@ export const metadata = {
   title: "Cyber Warriors Esport Portal",
   description: "Official Esport Platform for Cyber Warriors",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo.jpg",
+    shortcut: "/logo.jpg",
+    apple: "/logo.jpg",
   },
 };
 
