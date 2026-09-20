@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { getStoredStandings, Standing } from "../utils/tournamentStore";
 
 export default function RankingPage() {
@@ -24,7 +25,7 @@ export default function RankingPage() {
           ELITE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#AA7C11]">RANKINGS & STATS</span>
         </h1>
         <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
-          ট্র্যাকিং এবং পয়েন্ট টেবিলের মাধ্যমে প্লেয়ারদের পারফরম্যান্স ও শীর্ষ র্যাঙ্কিং তালিকা
+          ট্র্যাকিং এবং পয়েন্ট টেবিলের মাধ্যমে প্লেয়ারদের পারফরম্যান্স ও শীর্ষ র্যাঙ্কিং তালিকা
         </p>
       </div>
 
@@ -34,7 +35,7 @@ export default function RankingPage() {
         <div className="flex justify-center gap-3">
           <button
             onClick={() => setActiveCategory("rank")}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border cursor-pointer ${
               activeCategory === "rank"
                 ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 scale-105"
                 : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)] hover:text-white"
@@ -44,7 +45,7 @@ export default function RankingPage() {
           </button>
           <button
             onClick={() => setActiveCategory("scorers")}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border cursor-pointer ${
               activeCategory === "scorers"
                 ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 scale-105"
                 : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)] hover:text-white"
@@ -60,7 +61,7 @@ export default function RankingPage() {
             <button
               key={tab}
               onClick={() => setRankingTab(tab)}
-              className={`text-xs font-extrabold px-4 py-1.5 rounded-lg transition-all ${
+              className={`text-xs font-extrabold px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
                 rankingTab === tab
                   ? "bg-[#D4AF37] text-black font-black shadow-md"
                   : "text-[var(--text-muted)] hover:text-[#D4AF37]"
@@ -76,17 +77,17 @@ export default function RankingPage() {
           <div className="space-y-4">
             {/* Rank 1 Highlight Card */}
             {standings.length > 0 && (
-              <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-3 right-3 bg-[#D4AF37] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+              <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-[0_0_20px_rgba(212,175,55,0.15)] relative overflow-hidden">
+                <div className="absolute top-3 right-3 bg-[#D4AF37] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest shadow-md">
                   RANK #1 CHAMPION
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <span className="absolute -top-3 -left-2 text-2xl animate-bounce">👑</span>
-                      <div className="w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg">
-                        <img src="/logo.jpg" alt="Champion" className="w-full h-full object-cover" />
+                      <span className="absolute -top-3 -left-2 text-2xl animate-bounce z-10">👑</span>
+                      <div className="relative w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg">
+                        <Image src="/logo.jpg" alt="Champion" fill className="object-cover" />
                       </div>
                     </div>
                     <div>
@@ -103,7 +104,7 @@ export default function RankingPage() {
                     </div>
                   </div>
 
-                  <div className="text-center sm:text-right bg-[var(--bg-main)]/60 px-5 py-2.5 rounded-xl border border-[#D4AF37]/30">
+                  <div className="text-center sm:text-right bg-[var(--bg-main)]/80 px-5 py-2.5 rounded-xl border border-[#D4AF37]/40 shadow-inner">
                     <div className="text-3xl font-black text-[#D4AF37]">{standings[0].pts}</div>
                     <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">TOTAL POINTS</span>
                   </div>
@@ -130,11 +131,11 @@ export default function RankingPage() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border-color)]">
                     {standings.map((s) => (
-                      <tr key={s.rank} className="hover:bg-[#D4AF37]/5 transition-colors">
+                      <tr key={s.rank} className="hover:bg-[#D4AF37]/10 transition-colors group cursor-pointer">
                         <td className="p-3.5 font-black text-[#D4AF37]">#{s.rank}</td>
-                        <td className="p-3.5 font-bold text-white flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full overflow-hidden bg-black border border-gray-700">
-                            <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
+                        <td className="p-3.5 font-bold text-white flex items-center gap-2 group-hover:text-[#D4AF37] transition-colors">
+                          <div className="relative w-6 h-6 rounded-full overflow-hidden bg-black border border-gray-700 shrink-0">
+                            <Image src="/logo.jpg" alt="Logo" fill className="object-cover" />
                           </div>
                           <span>{s.name}</span>
                         </td>
@@ -155,10 +156,10 @@ export default function RankingPage() {
         {activeCategory === "scorers" && (
           <div className="space-y-4">
             {/* Golden Boot Winner Card */}
-            <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-2xl flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-[0_0_20px_rgba(212,175,55,0.15)] flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg">
-                  <img src="/logo.jpg" alt="Golden Boot Leader" className="w-full h-full object-cover" />
+                <div className="relative w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg shrink-0">
+                  <Image src="/logo.jpg" alt="Golden Boot Leader" fill className="object-cover" />
                 </div>
                 <div>
                   <span className="text-[10px] font-black tracking-widest text-[#D4AF37] uppercase flex items-center gap-1">
@@ -194,15 +195,15 @@ export default function RankingPage() {
                 ].map((scorer) => (
                   <div
                     key={scorer.rank}
-                    className="flex items-center justify-between p-4 bg-[var(--bg-card)] hover:bg-[#D4AF37]/5 transition-colors text-xs"
+                    className="flex items-center justify-between p-4 bg-[var(--bg-card)] hover:bg-[#D4AF37]/10 transition-colors text-xs cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-black text-[#D4AF37] w-6 text-center">#{scorer.rank}</span>
-                      <div className="w-8 h-8 rounded-full bg-black overflow-hidden border border-gray-700">
-                        <img src="/logo.jpg" alt={scorer.name} className="w-full h-full object-cover" />
+                      <div className="relative w-8 h-8 rounded-full bg-black overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
+                        <Image src="/logo.jpg" alt={scorer.name} fill className="object-cover" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-white text-sm">{scorer.name}</h4>
+                        <h4 className="font-bold text-white text-sm group-hover:text-[#D4AF37] transition-colors">{scorer.name}</h4>
                         <span className="text-[10px] text-[var(--text-muted)]">
                           👕 {scorer.app} MATCHES • ⚽ {scorer.ratio} RATIO
                         </span>

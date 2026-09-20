@@ -75,7 +75,6 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-[#D4AF37]/10 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="max-w-4xl mx-auto relative z-10 py-6">
-          {/* Main Logo (Increased size to w-64 h-64 / md:w-80 md:h-80) */}
           <div className="flex justify-center mb-2">
             <div className="relative w-64 h-64 md:w-80 md:h-80 p-2 flex items-center justify-center drop-shadow-[0_0_25px_rgba(212,175,55,0.4)] transition-all duration-300">
               <Image
@@ -159,12 +158,12 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Rank 1 Highlight Card */}
-          <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-[#D4AF37]/40 rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Rank 1 Highlight Card (trc-bd style gold glow & border) */}
+          <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300">
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="relative shrink-0">
-                <span className="absolute -top-3 -left-1 text-xl z-10">👑</span>
-                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40">
+                <span className="absolute -top-3 -left-1 text-xl z-10 animate-bounce">👑</span>
+                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md">
                   <Image src="/logo.jpg" alt="Leader" fill className="object-cover" />
                 </div>
               </div>
@@ -192,7 +191,7 @@ export default function Home() {
             <div className="text-[#D4AF37]">📊 69% WIN</div>
           </div>
 
-          {/* Ranking Table List */}
+          {/* Ranking List */}
           <div className="space-y-2">
             {[
               { rank: 2, name: "Farhanul Islam", app: 57, w: 39, gf: 152, win: 68, rtg: 1236 },
@@ -202,15 +201,15 @@ export default function Home() {
             ].map((player) => (
               <div
                 key={player.rank}
-                className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] hover:border-[#D4AF37]/40 transition-all text-xs"
+                className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] hover:border-[#D4AF37] hover:translate-x-1 transition-all duration-200 text-xs cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-black text-gray-400 w-4 text-center">{player.rank}</span>
-                  <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0">
+                  <span className="font-black text-[#D4AF37] w-4 text-center">{player.rank}</span>
+                  <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
                     <Image src="/logo.jpg" alt={player.name} fill className="object-cover" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-[var(--text-main)]">{player.name}</h4>
+                    <h4 className="font-bold text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">{player.name}</h4>
                     <div className="text-[10px] text-[var(--text-muted)] flex gap-2">
                       <span>👕 {player.app} APP</span>
                       <span>✔ {player.w} W</span>
@@ -241,7 +240,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-[#D4AF37]/40 rounded-xl p-4 mb-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex items-center justify-between shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300">
             <div className="flex items-center gap-3">
               <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shrink-0">
                 <Image src="/logo.jpg" alt="Golden Boot" fill className="object-cover" />
@@ -274,19 +273,19 @@ export default function Home() {
             ].map((scorer) => (
               <div
                 key={scorer.rank}
-                className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] text-xs"
+                className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] hover:border-[#D4AF37] hover:translate-x-1 transition-all duration-200 text-xs cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-black text-gray-400 w-4 text-center">{scorer.rank}</span>
-                  <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0">
+                  <span className="font-black text-[#D4AF37] w-4 text-center">{scorer.rank}</span>
+                  <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
                     <Image src="/logo.jpg" alt={scorer.name} fill className="object-cover" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-[var(--text-main)]">{scorer.name}</h4>
+                    <h4 className="font-bold text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">{scorer.name}</h4>
                     <span className="text-[10px] text-[var(--text-muted)]">👕 {scorer.app} APP • ⚽ {scorer.ratio} RT</span>
                   </div>
                 </div>
-                <div className="font-black text-sm text-[var(--text-main)]">{scorer.goals}</div>
+                <div className="font-black text-sm text-[#D4AF37]">{scorer.goals}</div>
               </div>
             ))}
           </div>
@@ -309,7 +308,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="max-w-md mx-auto bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl p-4 text-center space-y-3">
+          <div className="max-w-md mx-auto bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl p-4 text-center space-y-3 shadow-inner">
             <div className="flex justify-between items-center text-[10px] font-extrabold uppercase text-[#D4AF37] px-2">
               <span className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2 py-0.5 rounded-md">
                 SOLO TOURNAMENT
@@ -324,22 +323,22 @@ export default function Home() {
             </div>
 
             <div className="flex items-center justify-around py-4">
-              <div className="flex flex-col items-center gap-2">
-                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0">
+              <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0 group-hover:scale-105 transition-transform">
                   <Image src="/logo.jpg" alt="Shafin" fill className="object-cover" />
                 </div>
-                <span className="font-black text-xs text-[var(--text-main)]">Shafin</span>
+                <span className="font-black text-xs text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">Shafin</span>
               </div>
 
-              <div className="text-base font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30">
+              <div className="text-base font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30 animate-pulse">
                 VS
               </div>
 
-              <div className="flex flex-col items-center gap-2">
-                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0">
+              <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0 group-hover:scale-105 transition-transform">
                   <Image src="/logo.jpg" alt="Abu" fill className="object-cover" />
                 </div>
-                <span className="font-black text-xs text-[var(--text-main)]">Abu</span>
+                <span className="font-black text-xs text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">Abu</span>
               </div>
             </div>
           </div>
