@@ -5,8 +5,8 @@ import BottomNav from "./components/BottomNav";
 import "./globals.css";
 
 export const metadata = {
-  title: "Cyber Warriors Esport Portal",
-  description: "Official Esport Platform for Cyber Warriors",
+  title: "Cyber Warriors",
+  description: "Official Club Platform for Cyber Warriors",
   icons: {
     icon: "/logo.jpg",
     shortcut: "/logo.jpg",
