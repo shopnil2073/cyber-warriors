@@ -117,7 +117,7 @@ export default function TournamentPage() {
                 disabled={isExporting}
                 className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:brightness-110 transition-all cursor-pointer flex items-center gap-2"
               >
-                📸 {isExporting ? "GENERATING JPG..." : "DOWNLOAD BRACKET (16:9 JPG)"}
+                📸 {isExporting ? "GENERATING JPG..." : "DOWNLOAD BRACKET (JPG)"}
               </button>
             )}
 
@@ -299,7 +299,7 @@ export default function TournamentPage() {
               <div className="flex justify-between items-center border-t-2 border-[#D4AF37]/30 pt-3 text-[11px] font-bold text-slate-500 relative z-10">
                 <span>🌐 cyber-warriors.xyz</span>
                 <span className="text-[#AA7C11] font-black uppercase tracking-wider">
-                  POWERED BY CYBER WARRIORS ESPORT PORTAL
+                  POWERED BY CYBER WARRIORS
                 </span>
               </div>
             </div>
