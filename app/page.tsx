@@ -12,6 +12,43 @@ export default function Home() {
   const [currentTheme, setCurrentTheme] = useState<"dark" | "light">("dark");
   const [rankingTab, setRankingTab] = useState<"OVERALL" | "MONTHLY" | "WEEKLY">("OVERALL");
   const [ticker, setTicker] = useState("🔥 CYBER WARRIORS SOLO CHAMPIONSHIP SEASON 1 FIXTURES ARE NOW LIVE!");
+  const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+
+  const newsItems = [
+    {
+      id: 1,
+      title: "CW TRAINING DRILL & ACADEMY MATCHES",
+      image: "/logo.jpg",
+    },
+    {
+      id: 2,
+      title: "CYBER WARRIORS MATCH RULES & REGULATIONS",
+      image: "/logo.jpg",
+    },
+    {
+      id: 3,
+      title: "The Royal Club Academy Officially Welcomes Five New Players to Roster",
+      image: "/logo.jpg",
+    },
+    {
+      id: 4,
+      title: "Anupam Satter Turzo Joins Cyber Warriors As New Captain",
+      image: "/logo.jpg",
+    },
+    {
+      id: 5,
+      title: "Cyber Warriors Strengthens Main Roster with New Additions",
+      image: "/logo.jpg",
+    },
+  ];
+
+  // Auto Slider Timer (3 Seconds)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % newsItems.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [newsItems.length]);
 
   useEffect(() => {
     const activeTicker = getStoredTicker();
@@ -122,9 +159,72 @@ export default function Home() {
       </section>
 
       {/* Main Content Sections Container */}
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-12">
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
 
-        {/* 1. ELITE RANKING SECTION */}
+        {/* 1. HQ NEWS SECTION (AUTOMATIC SLIDE SHOW) */}
+        <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors overflow-hidden">
+          <div className="flex justify-between items-center mb-5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📰</span>
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-wider text-[var(--text-main)]">
+                HQ NEWS
+              </h2>
+            </div>
+            <Link
+              href="/news"
+              className="text-[11px] font-black text-[#D4AF37] border border-[#D4AF37]/40 px-3 py-1 rounded-full hover:bg-[#D4AF37]/10 transition-colors uppercase tracking-wider"
+            >
+              ALL NEWS →
+            </Link>
+          </div>
+
+          {/* Auto Sliding Container */}
+          <div className="relative w-full overflow-hidden rounded-2xl">
+            <div
+              className="flex transition-transform duration-700 ease-in-out gap-4"
+              style={{
+                transform: `translateX(-${currentNewsIndex * 260}px)`,
+              }}
+            >
+              {newsItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href="/news"
+                  className="shrink-0 w-[240px] md:w-[280px] h-[160px] md:h-[180px] relative rounded-2xl overflow-hidden border-2 border-[#23293A] hover:border-[#D4AF37] group transition-all duration-300 shadow-lg cursor-pointer"
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-4">
+                    <h3 className="font-extrabold text-xs md:text-sm text-white group-hover:text-[#D4AF37] transition-colors uppercase tracking-wide leading-snug line-clamp-2">
+                      {item.title}
+                    </h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Slide Navigation Dots */}
+            <div className="flex justify-center gap-1.5 mt-4">
+              {newsItems.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentNewsIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    currentNewsIndex === idx
+                      ? "bg-[#D4AF37] w-5"
+                      : "bg-gray-600 hover:bg-gray-400"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 2. ELITE RANKING SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -158,7 +258,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Rank 1 Highlight Card (trc-bd style gold glow & border) */}
+          {/* Rank 1 Highlight Card */}
           <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300">
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="relative shrink-0">
@@ -223,7 +323,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 2. TOP SCORERS SECTION */}
+        {/* 3. TOP SCORERS SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -291,7 +391,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 3. SOLO UPCOMING SECTION */}
+        {/* 4. SOLO UPCOMING SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
