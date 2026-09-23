@@ -1,265 +1,307 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, ChangeEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { registerUser } from "../utils/userStore";
+import { useRouter } from "next/navigation";
+import { registerNewPlayer, UserProfile } from "../utils/userStore";
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    konamiId: "",
-    gamingDevice: "",
-    city: "",
-    fbUrl: "",
-    countryCode: "BD (+880)",
-    whatsapp: "",
-  });
+  const router = useRouter();
+  const [avatar, setAvatar] = useState("/logo.jpg");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [avatarName, setAvatarName] = useState<string | null>(null);
-  const [avatarBase64, setAvatarBase64] = useState<string>("/logo.jpg");
-  const [submitted, setSubmitted] = useState(false);
+  const [konamiId, setKonamiId] = useState("");
+  const [hardware, setHardware] = useState("");
+  const [location, setLocation] = useState("");
+  const [facebook, setFacebook] = useState("");
+  const [countryCode, setCountryCode] = useState("BD (+880)");
+  const [whatsapp, setWhatsapp] = useState("");
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarName(file.name);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // New Loading State
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (reader.result) {
-          setAvatarBase64(reader.result as string);
-        }
+        setAvatar(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fixed Async Register Handler
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    registerUser({
-      name: formData.fullName,
-      email: formData.email,
-      phone: `${formData.countryCode} ${formData.whatsapp}`,
-      gameId: formData.konamiId || "CW_Player",
-      avatar: avatarBase64,
-      password: formData.password,
-      device: formData.gamingDevice,
-      city: formData.city,
-      fbUrl: formData.fbUrl,
-    });
+    if (!name || !email || !password || !confirmPassword) {
+      setError("Account Setup er sobgulo required field puron korun!");
+      return;
+    }
 
-    setSubmitted(true);
+    if (password !== confirmPassword) {
+      setError("Secure Password and Confirm Password match korchhe na!");
+      return;
+    }
+
+    setLoading(true); // Start Loading Animation
+
+    const newUser: UserProfile = {
+      id: `CW-${Math.floor(1000 + Math.random() * 9000)}`,
+      name,
+      email,
+      password,
+      rank: "#NEW",
+      avatar,
+      konamiId: konamiId || "Not Set",
+      hardware: hardware || "Not Set",
+      location: location || "Not Set",
+      bloodGroup: "Not Set",
+      dob: "Not Set",
+      status: "Free Agent",
+      facebook: facebook || "",
+      whatsapp: whatsapp ? `${countryCode} ${whatsapp}` : "",
+    };
+
+    try {
+      // Calling cPanel API with await
+      const success = await registerNewPlayer(newUser);
+      setLoading(false);
+
+      if (success) {
+        alert("Registration successful! Sign In to access your portal.");
+        router.push("/sign-in");
+      } else {
+        setError("Ei email address diye itomodhye account khola hoyechhe ba server issue!");
+      }
+    } catch (err) {
+      setLoading(false);
+      setError("Server response failure! Check your connection.");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f12] text-white py-12 px-4 pb-24 flex flex-col items-center justify-center font-sans">
+    <div className="min-h-screen bg-[#0A0D14] text-white flex flex-col items-center justify-center p-4 pb-24 font-sans">
       
-      {/* Header Branding */}
-      <div className="text-center space-y-1 mb-8">
-        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-wider text-[#D4AF37]">
+      {/* Title Header */}
+      <div className="text-center my-6 space-y-1">
+        <h1 className="text-2xl md:text-3xl font-black uppercase tracking-widest text-[#D4AF37] font-serif">
           CYBER WARRIORS
         </h1>
-        <p className="text-xs font-semibold tracking-widest uppercase text-gray-400">
+        <p className="text-xs font-bold tracking-widest text-gray-400 uppercase">
           ESTABLISH YOUR LEGACY
         </p>
       </div>
 
-      <div className="w-full max-w-xl bg-[#14181d] border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl">
-        {submitted ? (
-          <div className="text-center py-10 space-y-4">
-            <div className="text-5xl">🎉</div>
-            <h2 className="text-2xl font-black uppercase text-[#D4AF37]">
-              REGISTRATION SUCCESSFUL!
-            </h2>
-            <p className="text-xs text-gray-400">
-              Your account setup is complete. Welcome to the club, <span className="text-[#D4AF37] font-bold">{formData.fullName}</span>!
-            </p>
-            <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
-              <Link
-                href="/sign-in"
-                className="px-6 py-2.5 bg-[#D4AF37] text-black font-black text-xs uppercase rounded-xl hover:bg-[#b5942d] transition-colors inline-block text-center"
-              >
-                Sign In Now
-              </Link>
-              <Link
-                href="/"
-                className="px-6 py-2.5 bg-[#1c2229] border border-gray-700 text-white font-black text-xs uppercase rounded-xl hover:border-[#D4AF37] transition-colors inline-block text-center"
-              >
-                Go to Homepage
-              </Link>
-            </div>
+      <div className="max-w-2xl w-full space-y-6">
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-bold p-3 rounded-xl text-center">
+            ⚠️ {error}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* 1. ACCOUNT SETUP */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-gray-800 pb-2">
-                <span className="text-[#D4AF37]">👤</span>
-                <h2 className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">
-                  ACCOUNT SETUP
-                </h2>
+        )}
+
+        <form onSubmit={handleRegister} className="space-y-6">
+          
+          {/* 1. ACCOUNT SETUP */}
+          <div className="bg-[#111520] border border-[#23293A] rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#23293A] pb-3 text-[#D4AF37] font-black text-xs uppercase tracking-wider">
+              👤 ACCOUNT SETUP
+            </div>
+
+            <div className="space-y-3 text-xs font-medium">
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-gray-400">👤</span>
+                <input
+                  type="text"
+                  required
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
+                />
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Full Name"
-                    value={formData.fullName}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  />
-                </div>
-
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-gray-400">✉️</span>
                   <input
                     type="email"
                     required
                     placeholder="Email Address"
-                    value={formData.email}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
                   />
                 </div>
 
-                <div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-gray-400">🔒</span>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     placeholder="Secure Password"
-                    value={formData.password}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-10 py-3 rounded-xl text-white outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-gray-400 hover:text-[#D4AF37]"
+                  >
+                    {showPassword ? "👁️" : "🙈"}
+                  </button>
                 </div>
               </div>
+
+              {/* Confirm Password Field */}
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-gray-400">🔑</span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. PLAYER PROFILE */}
+          <div className="bg-[#111520] border border-[#23293A] rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#23293A] pb-3 text-[#D4AF37] font-black text-xs uppercase tracking-wider">
+              🎮 PLAYER PROFILE
             </div>
 
-            {/* 2. PLAYER PROFILE */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2 border-b border-gray-800 pb-2">
-                <span className="text-[#D4AF37]">🎮</span>
-                <h2 className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">
-                  PLAYER PROFILE
-                </h2>
-              </div>
-
-              <div className="space-y-3">
-                <div>
+            <div className="space-y-3 text-xs font-medium">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-gray-400">🆔</span>
                   <input
                     type="text"
                     placeholder="Konami UID"
-                    value={formData.konamiId}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, konamiId: e.target.value })}
+                    value={konamiId}
+                    onChange={(e) => setKonamiId(e.target.value)}
+                    className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
                   />
                 </div>
 
-                <div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-gray-400">📱</span>
                   <input
                     type="text"
                     placeholder="Gaming Device"
-                    value={formData.gamingDevice}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, gamingDevice: e.target.value })}
+                    value={hardware}
+                    onChange={(e) => setHardware(e.target.value)}
+                    className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <input
-                    type="text"
-                    placeholder="City / District"
-                    value={formData.city}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  />
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-gray-400">📍</span>
+                <input
+                  type="text"
+                  placeholder="City / District"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
+                />
+              </div>
+
+              {/* Avatar Upload */}
+              <div className="bg-[#0A0D14] border border-[#23293A] p-4 rounded-xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[#D4AF37] shrink-0 bg-black">
+                    <Image src={avatar} alt="Avatar" fill className="object-cover" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-gray-200 block">
+                      Upload Profile Avatar (Required)
+                    </span>
+                    <span className="text-[10px] text-gray-500">JPG or PNG image file</span>
+                  </div>
                 </div>
 
-                {/* File Upload Input */}
-                <label className="flex items-center gap-3 bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-gray-400 cursor-pointer hover:border-[#D4AF37] transition-colors">
-                  <span className="text-[#D4AF37]">📁</span>
-                  <span className="truncate">
-                    {avatarName ? avatarName : "Upload Profile Avatar (Optional)"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+                <label className="bg-[#D4AF37] text-black font-black text-xs px-4 py-2 rounded-xl cursor-pointer hover:brightness-110 transition-all shrink-0">
+                  CHOOSE FILE
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                 </label>
               </div>
             </div>
+          </div>
 
-            {/* 3. COMMUNICATIONS */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2 border-b border-gray-800 pb-2">
-                <span className="text-[#D4AF37]">📱</span>
-                <h2 className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">
-                  COMMUNICATIONS
-                </h2>
+          {/* 3. COMMUNICATIONS */}
+          <div className="bg-[#111520] border border-[#23293A] rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#23293A] pb-3 text-[#D4AF37] font-black text-xs uppercase tracking-wider">
+              📡 COMMUNICATIONS
+            </div>
+
+            <div className="space-y-3 text-xs font-medium">
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-gray-400">🌐</span>
+                <input
+                  type="url"
+                  placeholder="Facebook Profile URL"
+                  value={facebook}
+                  onChange={(e) => setFacebook(e.target.value)}
+                  className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
+                />
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <input
-                    type="url"
-                    placeholder="Facebook Profile URL"
-                    value={formData.fbUrl}
-                    className="w-full bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, fbUrl: e.target.value })}
-                  />
-                </div>
+              {/* Country Code & WhatsApp Box */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="w-32 md:w-36 bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] px-3 py-3 rounded-xl text-white outline-none font-bold cursor-pointer shrink-0 text-xs"
+                >
+                  <option value="BD (+880)">BD (+880)</option>
+                  <option value="IN (+91)">IN (+91)</option>
+                  <option value="PK (+92)">PK (+92)</option>
+                  <option value="US/CA (+1)">US/CA (+1)</option>
+                  <option value="UK (+44)">UK (+44)</option>
+                </select>
 
-                {/* Country Code Dropdown + WhatsApp Input */}
-                <div className="flex gap-2">
-                  <select
-                    value={formData.countryCode}
-                    onChange={(e) => setFormData({ ...formData, countryCode: e.target.value })}
-                    className="bg-[#1c2229] border border-gray-700/60 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-[#D4AF37] cursor-pointer"
-                  >
-                    <option value="BD (+880)">BD (+880)</option>
-                    <option value="IN (+91)">IN (+91)</option>
-                    <option value="PK (+92)">PK (+92)</option>
-                    <option value="CN (+86)">CN (+86)</option>
-                    <option value="US/CA (+1)">US/CA (+1)</option>
-                    <option value="UK (+44)">UK (+44)</option>
-                  </select>
-
+                <div className="flex-1 relative flex items-center">
+                  <span className="absolute left-4 text-gray-400">💬</span>
                   <input
                     type="tel"
                     placeholder="WhatsApp (Optional)"
-                    value={formData.whatsapp}
-                    className="flex-1 bg-[#1c2229] border border-gray-700/60 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#D4AF37]"
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3 rounded-xl text-white outline-none"
                   />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full py-3.5 bg-[#D4AF37] text-black font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#b5942d] transition-all shadow-lg flex items-center justify-center gap-2 mt-4 cursor-pointer"
-            >
-              CONFIRM REGISTRATION ⚡
-            </button>
+          {/* Confirm Submit Button with Loading */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black font-black py-4 rounded-xl uppercase tracking-widest text-sm shadow-xl hover:brightness-110 cursor-pointer transition-all disabled:opacity-50"
+          >
+            {loading ? "SAVING TO DATABASE..." : "CONFIRM REGISTRATION ⚡"}
+          </button>
+        </form>
 
-            {/* Bottom Link */}
-            <div className="text-center pt-2">
-              <span className="text-xs text-gray-400">Already have a membership? </span>
-              <Link href="/sign-in" className="text-xs font-bold text-[#D4AF37] hover:underline">
-                Sign in here
-              </Link>
-            </div>
-
-          </form>
-        )}
+        <div className="text-center text-xs font-medium text-gray-400 flex justify-center items-center gap-1.5 pt-2">
+          <span>Already have a membership?</span>
+          <Link href="/sign-in" className="font-black text-[#D4AF37] hover:underline uppercase">
+            Sign in here
+          </Link>
+        </div>
       </div>
     </div>
   );
