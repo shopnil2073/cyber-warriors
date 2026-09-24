@@ -70,22 +70,14 @@ export default function RegisterPage() {
     };
 
     try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      });
-
-      const data = await res.json();
+      const success = await registerNewPlayer(newUser);
       setLoading(false);
 
-      if (data.status === "success") {
+      if (success) {
         alert("Registration successful! Sign In to access your portal.");
         router.push("/sign-in");
-      } else if (data.status === "exists") {
-        setError("Ei email address diye itomodhye account khola hoyechhe!");
       } else {
-        setError(data.message || "Database Connection/Server error occurred!");
+        setError("Ei email address diye itomodhye account khola hoyechhe ba server issue!");
       }
     } catch (err) {
       setLoading(false);
