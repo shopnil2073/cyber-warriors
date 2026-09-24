@@ -20,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="min-h-screen relative pb-20 antialiased bg-[#0B0E14] text-white">
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen relative pb-20 antialiased bg-white dark:bg-[#0B0E14] text-black dark:text-white transition-colors duration-300">
         <Providers>
           <Navbar />
           <main className="w-full">{children}</main>
