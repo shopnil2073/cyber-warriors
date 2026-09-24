@@ -15,10 +15,14 @@ const config: Config = {
           dark: "#0B0E14",
           card: "#121624",
           border: "#23293A",
+          lightBg: "#F4F6F8",
+          lightCard: "#FFFFFF",
+          lightBorder: "#E5E7EB",
         },
       },
     },
   },
   plugins: [],
 };
+
 export default config;

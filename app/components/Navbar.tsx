@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import Sidebar from "./Sidebar";
 
 export default function Navbar() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -15,7 +15,7 @@ export default function Navbar() {
     setMounted(true);
   }, []);
 
-  const isDark = mounted ? (theme === "dark" || resolvedTheme === "dark") : true;
+  const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
@@ -49,14 +49,15 @@ export default function Navbar() {
           {mounted && (
             <button
               onClick={toggleTheme}
-              className="relative w-12 h-6 rounded-full bg-gray-200 dark:bg-[#141824] border border-gray-300 dark:border-[#23293A] p-0.5 flex items-center justify-between cursor-pointer"
+              type="button"
+              className="relative w-12 h-6 rounded-full bg-gray-300 dark:bg-[#141824] border border-gray-400 dark:border-[#23293A] p-0.5 flex items-center justify-between cursor-pointer"
               title="Toggle Dark / Light Mode"
             >
               <span className="text-[10px] z-10 pl-1">🌙</span>
               <span className="text-[10px] z-10 pr-1">☀️</span>
               <div
-                className={`absolute w-4 h-4 rounded-full bg-[#D4AF37] transition-transform duration-300 ${
-                  isDark ? "translate-x-0" : "translate-x-6"
+                className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#D4AF37] transition-all duration-300 ${
+                  isDark ? "left-0.5" : "left-6"
                 }`}
               />
             </button>
@@ -65,7 +66,7 @@ export default function Navbar() {
           {/* Royal Menu Drawer Trigger Button */}
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="p-2 text-[#D4AF37] hover:text-white bg-gray-100 dark:bg-[#141824] border border-gray-300 dark:border-[#23293A] rounded-lg focus:outline-none transition-all flex items-center gap-1.5 cursor-pointer"
+            className="p-2 text-[#D4AF37] hover:text-black dark:hover:text-white bg-gray-100 dark:bg-[#141824] border border-gray-300 dark:border-[#23293A] rounded-lg focus:outline-none transition-all flex items-center gap-1.5 cursor-pointer"
             aria-label="Open Royal Club Navigation"
           >
             <div className="space-y-1 w-4">
