@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const [whatsapp, setWhatsapp] = useState("");
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // New Loading State
+  const [loading, setLoading] = useState(false);
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,7 +36,6 @@ export default function RegisterPage() {
     }
   };
 
-  // Fixed Async Register Handler
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -51,7 +50,7 @@ export default function RegisterPage() {
       return;
     }
 
-    setLoading(true); // Start Loading Animation
+    setLoading(true);
 
     const newUser: UserProfile = {
       id: `CW-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -71,19 +70,26 @@ export default function RegisterPage() {
     };
 
     try {
-      // Calling cPanel API with await
-      const success = await registerNewPlayer(newUser);
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUser),
+      });
+
+      const data = await res.json();
       setLoading(false);
 
-      if (success) {
+      if (data.status === "success") {
         alert("Registration successful! Sign In to access your portal.");
         router.push("/sign-in");
+      } else if (data.status === "exists") {
+        setError("Ei email address diye itomodhye account khola hoyechhe!");
       } else {
-        setError("Ei email address diye itomodhye account khola hoyechhe ba server issue!");
+        setError(data.message || "Database Connection/Server error occurred!");
       }
     } catch (err) {
       setLoading(false);
-      setError("Server response failure! Check your connection.");
+      setError("Server Network Failure! Check database credentials and connection.");
     }
   };
 
