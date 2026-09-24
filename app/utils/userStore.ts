@@ -16,7 +16,7 @@ export interface UserProfile {
 }
 
 // cPanel PHP API Base URL (Direct HTTP/HTTPS connection)
-const API_BASE_URL = "https://cyber-warriors.xyz";
+const API_BASE_URL = "https://cyber-warriors.xyz/api";
 
 export const EMPTY_USER: UserProfile = {
   id: "",
@@ -32,10 +32,10 @@ export const EMPTY_USER: UserProfile = {
   status: "Free Agent",
 };
 
-// 1. Registrieren via register.php
+// 1. Registrieren via api/reg.php
 export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/register.php`, {
+    const res = await fetch(`${API_BASE_URL}/reg.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newUser),
@@ -48,7 +48,7 @@ export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> 
   }
 };
 
-// 2. Anmelden via auth.php
+// 2. Anmelden via api/auth.php
 export const loginPlayer = async (email: string, pass: string): Promise<UserProfile | null> => {
   try {
     const res = await fetch(`${API_BASE_URL}/auth.php`, {
@@ -99,7 +99,7 @@ export const getActiveUser = (): UserProfile | null => {
   }
 };
 
-// 4. Profil aktualisieren via update.php
+// 4. Profil aktualisieren via api/update.php
 export const updateActiveUserProfile = async (updated: UserProfile) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_active_user", JSON.stringify(updated));
