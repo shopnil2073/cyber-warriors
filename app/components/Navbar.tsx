@@ -15,29 +15,31 @@ export default function Navbar() {
     setMounted(true);
   }, []);
 
-  const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
+  // Check if current active theme is dark
+  const currentTheme = theme === "system" ? resolvedTheme : theme;
+  const isDark = !mounted || currentTheme === "dark";
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
   };
+
+  // Determine Logo Image Path
+  const logoSrc = isDark ? "/logo.jpg" : "/logo-light.jpg";
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0B0E14] border-b border-gray-200 dark:border-[#23293A] px-4 md:px-8 py-2.5 flex justify-between items-center transition-colors duration-300">
         <Link href="/" className="flex items-center gap-3">
           <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D4AF37]/40 bg-black shrink-0">
-            {mounted ? (
-              <Image
-                src={isDark ? "/logo.jpg" : "/logo-light.jpg"}
-                alt="Cyber Warriors Logo"
-                width={36}
-                height={36}
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="w-9 h-9 bg-black" />
-            )}
+            <Image
+              key={logoSrc}
+              src={logoSrc}
+              alt="Cyber Warriors Logo"
+              width={36}
+              height={36}
+              className="object-cover"
+              priority
+            />
           </div>
           <h1 className="font-extrabold text-base md:text-lg tracking-wider text-black dark:text-white">
             CYBER <span className="text-[#D4AF37]">WARRIORS</span>
