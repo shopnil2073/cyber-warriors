@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import Sidebar from "./Sidebar";
 
 export default function Navbar() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -15,28 +15,29 @@ export default function Navbar() {
     setMounted(true);
   }, []);
 
-  const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
+  const isDark = mounted ? (theme === "dark" || resolvedTheme === "dark") : true;
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
   };
-
-  // Theme onujayi Logo select
-  const logoSrc = mounted && !isDark ? "/logo-light.jpg" : "/logo.jpg";
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0B0E14] border-b border-gray-200 dark:border-[#23293A] px-4 md:px-8 py-2.5 flex justify-between items-center transition-colors duration-300">
         <Link href="/" className="flex items-center gap-3">
           <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D4AF37]/40 bg-black shrink-0">
-            <Image
-              src={logoSrc}
-              alt="Cyber Warriors Logo"
-              width={36}
-              height={36}
-              className="object-cover transition-opacity duration-300"
-              priority
-            />
+            {mounted ? (
+              <Image
+                src={isDark ? "/logo.jpg" : "/logo-light.jpg"}
+                alt="Cyber Warriors Logo"
+                width={36}
+                height={36}
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="w-9 h-9 bg-black" />
+            )}
           </div>
           <h1 className="font-extrabold text-base md:text-lg tracking-wider text-black dark:text-white">
             CYBER <span className="text-[#D4AF37]">WARRIORS</span>
