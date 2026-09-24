@@ -15,8 +15,8 @@ export interface UserProfile {
   status: string;
 }
 
-// Nutzung der internen Next.js API-Routen
-const API_BASE_URL = "/api";
+// cPanel PHP API Base URL (Direct HTTP/HTTPS connection)
+const API_BASE_URL = "https://cyber-warriors.xyz";
 
 export const EMPTY_USER: UserProfile = {
   id: "",
@@ -32,10 +32,10 @@ export const EMPTY_USER: UserProfile = {
   status: "Free Agent",
 };
 
-// 1. Registrieren via /api/register
+// 1. Registrieren via register.php
 export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/register`, {
+    const res = await fetch(`${API_BASE_URL}/register.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newUser),
@@ -48,10 +48,10 @@ export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> 
   }
 };
 
-// 2. Anmelden via /api/login
+// 2. Anmelden via auth.php
 export const loginPlayer = async (email: string, pass: string): Promise<UserProfile | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    const res = await fetch(`${API_BASE_URL}/auth.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password: pass }),
@@ -99,13 +99,13 @@ export const getActiveUser = (): UserProfile | null => {
   }
 };
 
-// 4. Profil aktualisieren via /api/update-profile
+// 4. Profil aktualisieren via update.php
 export const updateActiveUserProfile = async (updated: UserProfile) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_active_user", JSON.stringify(updated));
   }
   try {
-    await fetch(`${API_BASE_URL}/update-profile`, {
+    await fetch(`${API_BASE_URL}/update.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updated),
