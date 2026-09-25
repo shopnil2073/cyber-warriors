@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen relative pb-20 antialiased bg-gray-100 dark:bg-[#0B0E14] text-black dark:text-white transition-colors duration-300">
+      <body className="min-h-screen relative pb-20 antialiased transition-colors duration-300">
         <Providers>
           <Navbar />
           <main className="w-full">{children}</main>

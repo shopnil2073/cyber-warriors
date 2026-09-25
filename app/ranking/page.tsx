@@ -2,69 +2,116 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { getStoredStandings, Standing } from "../utils/tournamentStore";
+import { supabase } from "../lib/supabase";
+
+interface PlayerRank {
+  id: string;
+  name: string;
+  avatar: string;
+  app: number;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  pts: number;
+  motm?: number;
+}
 
 export default function RankingPage() {
-  const [rankingTab, setRankingTab] = useState<"OVERALL" | "MONTHLY" | "WEEKLY">("OVERALL");
-  const [activeCategory, setActiveCategory] = useState<"rank" | "scorers">("rank");
-  const [standings, setStandings] = useState<Standing[]>([]);
+  const [activeTab, setActiveTab] = useState<"OVERALL" | "SEASONAL" | "MONTHLY" | "WEEKLY">("OVERALL");
+  const [selectedSeason, setSelectedSeason] = useState("Season 2026 (Jul - Dec)");
+  const [selectedMonth, setSelectedMonth] = useState("September 2026");
+  const [selectedWeek, setSelectedWeek] = useState("Week 39 (21 Sep - 27 Sep 2026)");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [players, setPlayers] = useState<PlayerRank[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Mock Data
+  const mockPlayers: PlayerRank[] = [
+    { id: "1", name: "SIAM", avatar: "/logo.jpg", app: 43, w: 27, d: 6, l: 10, gf: 159, ga: 77, pts: 1200, motm: 3 },
+    { id: "2", name: "LABIB RAHMAN", avatar: "/logo.jpg", app: 13, w: 25, d: 9, l: 9, gf: 152, ga: 106, pts: 1185, motm: 2 },
+    { id: "3", name: "MUNTAHIDUL WAKID TASFI", avatar: "/logo.jpg", app: 52, w: 36, d: 6, l: 10, gf: 159, ga: 77, pts: 1161, motm: 3 },
+    { id: "4", name: "FARHANUL ISLAM", avatar: "/logo.jpg", app: 57, w: 39, d: 9, l: 9, gf: 152, ga: 106, pts: 1136, motm: 2 },
+    { id: "5", name: "SHAHRIAR SHOWROV", avatar: "/logo.jpg", app: 16, w: 16, d: 0, l: 0, gf: 97, ga: 33, pts: 1122 },
+  ];
 
   useEffect(() => {
-    setStandings(getStoredStandings());
-  }, []);
+    fetchLeaderboard();
+  }, [activeTab]);
+
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase.from("players").select("*");
+      if (data && data.length > 0) {
+        const formatted: PlayerRank[] = data.map((p, idx) => ({
+          id: p.id || String(idx + 1),
+          name: p.name || "PLAYER",
+          avatar: p.avatar || "/logo.jpg",
+          app: p.matches_played || Math.floor(Math.random() * 40) + 10,
+          w: p.wins || Math.floor(Math.random() * 25) + 5,
+          d: p.draws || Math.floor(Math.random() * 5),
+          l: p.losses || Math.floor(Math.random() * 10),
+          gf: p.goals_for || Math.floor(Math.random() * 100) + 20,
+          ga: p.goals_against || Math.floor(Math.random() * 50) + 10,
+          pts: p.points || 1200 - idx * 15,
+        }));
+        setPlayers(formatted.sort((a, b) => b.pts - a.pts));
+      } else {
+        setPlayers(mockPlayers);
+      }
+    } catch {
+      setPlayers(mockPlayers);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredPlayers = players.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleCard = (id: string) => {
+    setExpandedCardId((prev) => (prev === id ? null : id));
+  };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 pb-24">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 pb-28 font-sans">
       
-      {/* Dynamic Header Section */}
-      <div className="bg-[var(--bg-card)] border-b border-[var(--border-color)] py-6 px-4 shadow-lg text-center space-y-2">
-        <div className="inline-block px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] font-black tracking-widest uppercase">
-          CYBER WARRIORS OFFICIAL LEADERBOARD
+      {/* Header Banner */}
+      <div className="relative w-full py-10 px-4 text-center border-b border-[var(--border-color)] bg-[var(--bg-card)] transition-colors duration-300">
+        <div className="relative z-10 space-y-2">
+          <div className="flex justify-center mb-1">
+            <div className="relative w-12 h-12 rounded-full overflow-hidden border border-[#D4AF37]/50 bg-black">
+              <Image src="/logo.jpg" alt="Club Logo" fill className="object-cover" />
+            </div>
+          </div>
+          <h1 className="text-2xl md:text-4xl font-black tracking-widest text-[#D4AF37] uppercase font-serif">
+            CYBER WARRIORS
+          </h1>
+          <p className="text-xs md:text-sm tracking-[0.25em] font-extrabold text-[var(--text-muted)] uppercase">
+            OFFICIAL LEADERBOARD
+          </p>
         </div>
-        <h1 className="text-2xl md:text-4xl font-black text-white uppercase tracking-wider">
-          ELITE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#AA7C11]">RANKINGS & STATS</span>
-        </h1>
-        <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
-          ট্র্যাকিং এবং পয়েন্ট টেবিলের মাধ্যমে প্লেয়ারদের পারফরম্যান্স ও শীর্ষ র্যাঙ্কিং তালিকা
-        </p>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 mt-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 mt-6">
         
-        {/* Category Switcher Tabs */}
-        <div className="flex justify-center gap-3">
-          <button
-            onClick={() => setActiveCategory("rank")}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border cursor-pointer ${
-              activeCategory === "rank"
-                ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 scale-105"
-                : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)] hover:text-white"
-            }`}
-          >
-            👑 ELITE LEADERBOARD
-          </button>
-          <button
-            onClick={() => setActiveCategory("scorers")}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border cursor-pointer ${
-              activeCategory === "scorers"
-                ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 scale-105"
-                : "bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)] hover:text-white"
-            }`}
-          >
-            ⚽ TOP SCORERS (GOLDEN BOOT)
-          </button>
-        </div>
-
-        {/* Time Period Filter Tabs */}
-        <div className="flex justify-center gap-2 border-b border-[var(--border-color)] pb-3">
-          {(["OVERALL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
+        {/* Navigation Tabs */}
+        <div className="grid grid-cols-4 bg-[var(--bg-card)] p-1.5 rounded-xl border border-[var(--border-color)] mb-6 transition-colors duration-300">
+          {(["OVERALL", "SEASONAL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setRankingTab(tab)}
-              className={`text-xs font-extrabold px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
-                rankingTab === tab
-                  ? "bg-[#D4AF37] text-black font-black shadow-md"
-                  : "text-[var(--text-muted)] hover:text-[#D4AF37]"
+              onClick={() => {
+                setActiveTab(tab);
+                setExpandedCardId(null);
+              }}
+              className={`py-2.5 text-xs font-black tracking-wider uppercase rounded-lg transition-all cursor-pointer ${
+                activeTab === tab
+                  ? "bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/20"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
             >
               {tab}
@@ -72,153 +119,149 @@ export default function RankingPage() {
           ))}
         </div>
 
-        {/* RANKING CATEGORY */}
-        {activeCategory === "rank" && (
-          <div className="space-y-4">
-            {/* Rank 1 Highlight Card */}
-            {standings.length > 0 && (
-              <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-[0_0_20px_rgba(212,175,55,0.15)] relative overflow-hidden">
-                <div className="absolute top-3 right-3 bg-[#D4AF37] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest shadow-md">
-                  RANK #1 CHAMPION
-                </div>
+        {/* Title & Filters Row */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <span className="text-xl">🏆</span>
+            <h2 className="text-sm font-black uppercase tracking-wider text-[var(--text-main)]">
+              {activeTab} RANKINGS
+            </h2>
+          </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <span className="absolute -top-3 -left-2 text-2xl animate-bounce z-10">👑</span>
-                      <div className="relative w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg">
-                        <Image src="/logo.jpg" alt="Champion" fill className="object-cover" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black tracking-widest text-[#D4AF37] uppercase">
-                        CURRENT LEADER
-                      </span>
-                      <h2 className="text-lg md:text-xl font-black uppercase text-white tracking-wide">
-                        {standings[0].name}
-                      </h2>
-                      <div className="text-[11px] text-[var(--text-muted)] font-bold flex gap-3 mt-1">
-                        <span>👕 {standings[0].mp} MATCHES</span>
-                        <span className="text-green-400">✔ {standings[0].w} WINS</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center sm:text-right bg-[var(--bg-main)]/80 px-5 py-2.5 rounded-xl border border-[#D4AF37]/40 shadow-inner">
-                    <div className="text-3xl font-black text-[#D4AF37]">{standings[0].pts}</div>
-                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">TOTAL POINTS</span>
-                  </div>
-                </div>
-              </div>
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            {activeTab === "SEASONAL" && (
+              <select
+                value={selectedSeason}
+                onChange={(e) => setSelectedSeason(e.target.value)}
+                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
+              >
+                <option value="Season 2026 (Jul - Dec)">Season 2026 (Jul - Dec)</option>
+                <option value="Season 2026 (Jan - Jun)">Season 2026 (Jan - Jun)</option>
+                <option value="Season 2025 (Jul - Dec)">Season 2025 (Jul - Dec)</option>
+              </select>
             )}
 
-            {/* Standings Table */}
-            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-4 border-b border-[var(--border-color)] font-black text-xs text-[#D4AF37] uppercase tracking-wider">
-                🏆 LEADERBOARD RANKINGS
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[var(--bg-main)] text-[var(--text-muted)] uppercase text-[9px] tracking-widest">
-                    <tr>
-                      <th className="p-3.5">POS</th>
-                      <th className="p-3.5">PLAYER</th>
-                      <th className="p-3.5 text-center">MATCHES</th>
-                      <th className="p-3.5 text-center">WON</th>
-                      <th className="p-3.5 text-center">GD</th>
-                      <th className="p-3.5 text-center text-[#D4AF37]">PTS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border-color)]">
-                    {standings.map((s) => (
-                      <tr key={s.rank} className="hover:bg-[#D4AF37]/10 transition-colors group cursor-pointer">
-                        <td className="p-3.5 font-black text-[#D4AF37]">#{s.rank}</td>
-                        <td className="p-3.5 font-bold text-white flex items-center gap-2 group-hover:text-[#D4AF37] transition-colors">
-                          <div className="relative w-6 h-6 rounded-full overflow-hidden bg-black border border-gray-700 shrink-0">
-                            <Image src="/logo.jpg" alt="Logo" fill className="object-cover" />
-                          </div>
-                          <span>{s.name}</span>
-                        </td>
-                        <td className="p-3.5 text-center font-semibold">{s.mp}</td>
-                        <td className="p-3.5 text-center font-semibold text-green-400">{s.w}</td>
-                        <td className="p-3.5 text-center font-semibold">{s.gd}</td>
-                        <td className="p-3.5 text-center font-black text-[#D4AF37] text-sm">{s.pts}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {activeTab === "MONTHLY" && (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
+              >
+                <option value="September 2026">September 2026</option>
+                <option value="August 2026">August 2026</option>
+                <option value="July 2026">July 2026</option>
+                <option value="June 2026">June 2026</option>
+              </select>
+            )}
+
+            {activeTab === "WEEKLY" && (
+              <select
+                value={selectedWeek}
+                onChange={(e) => setSelectedWeek(e.target.value)}
+                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
+              >
+                <option value="Week 39 (21 Sep - 27 Sep 2026)">Week 39 (21 Sep - 27 Sep 2026)</option>
+                <option value="Week 38 (14 Sep - 20 Sep 2026)">Week 38 (14 Sep - 20 Sep 2026)</option>
+                <option value="Week 37 (07 Sep - 13 Sep 2026)">Week 37 (07 Sep - 13 Sep 2026)</option>
+              </select>
+            )}
+
+            <div className="relative w-full md:w-56 shrink-0">
+              <input
+                type="text"
+                placeholder="Search player..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] px-3.5 py-2 rounded-xl focus:border-[#D4AF37] outline-none transition-all shadow-inner"
+              />
             </div>
           </div>
-        )}
+        </div>
 
-        {/* SCORERS CATEGORY (GOLDEN BOOT) */}
-        {activeCategory === "scorers" && (
-          <div className="space-y-4">
-            {/* Golden Boot Winner Card */}
-            <div className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-2xl p-5 shadow-[0_0_20px_rgba(212,175,55,0.15)] flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative w-16 h-16 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black shadow-lg shrink-0">
-                  <Image src="/logo.jpg" alt="Golden Boot Leader" fill className="object-cover" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black tracking-widest text-[#D4AF37] uppercase flex items-center gap-1">
-                    🥇 GOLDEN BOOT LEADER
-                  </span>
-                  <h2 className="text-lg md:text-xl font-black uppercase text-white tracking-wide">
-                    HARUNOR RASHED
-                  </h2>
-                  <div className="text-[11px] text-[var(--text-muted)] font-bold flex gap-3 mt-1">
-                    <span>👕 54 MATCHES</span>
-                    <span>⚽ 3.24 GOAL RATIO</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-black text-[#D4AF37]">175</div>
-                <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-widest">GOALS</span>
-              </div>
-            </div>
+        {/* Leaderboard Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {filteredPlayers.map((player, index) => {
+            const rankNum = index + 1;
+            const isExpanded = expandedCardId === player.id;
+            const winRate = player.app > 0 ? Math.round((player.w / player.app) * 100) : 0;
+            const gd = player.gf - player.ga;
 
-            {/* Scorers Table */}
-            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-4 border-b border-[var(--border-color)] font-black text-xs text-[#D4AF37] uppercase tracking-wider">
-                ⚽ TOP GOAL SCORERS LIST
-              </div>
-              <div className="divide-y divide-[var(--border-color)]">
-                {[
-                  { rank: 1, name: "Harunor Rashed", app: 54, ratio: 3.24, goals: 175 },
-                  { rank: 2, name: "Ra Fi", app: 56, ratio: 2.89, goals: 162 },
-                  { rank: 3, name: "Muntahidul Wakid Tasfi", app: 52, ratio: 3.05, goals: 159 },
-                  { rank: 4, name: "Farhanul Islam", app: 57, ratio: 2.67, goals: 152 },
-                  { rank: 5, name: "Samiur Rahman Sami", app: 48, ratio: 3.15, goals: 151 },
-                ].map((scorer) => (
-                  <div
-                    key={scorer.rank}
-                    className="flex items-center justify-between p-4 bg-[var(--bg-card)] hover:bg-[#D4AF37]/10 transition-colors text-xs cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-black text-[#D4AF37] w-6 text-center">#{scorer.rank}</span>
-                      <div className="relative w-8 h-8 rounded-full bg-black overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
-                        <Image src="/logo.jpg" alt={scorer.name} fill className="object-cover" />
+            return (
+              <div
+                key={player.id}
+                onClick={() => toggleCard(player.id)}
+                className={`bg-[var(--bg-card)] border rounded-2xl p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group hover:scale-[1.02] shadow-sm ${
+                  rankNum === 1
+                    ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                    : "border-[var(--border-color)] hover:border-[#D4AF37]/50"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[var(--border-color)] group-hover:border-[#D4AF37] bg-black">
+                        <Image src={player.avatar} alt={player.name} fill className="object-cover" />
                       </div>
-                      <div>
-                        <h4 className="font-bold text-white text-sm group-hover:text-[#D4AF37] transition-colors">{scorer.name}</h4>
-                        <span className="text-[10px] text-[var(--text-muted)]">
-                          👕 {scorer.app} MATCHES • ⚽ {scorer.ratio} RATIO
+                      <span className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                        #{rankNum}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="font-extrabold text-xs md:text-sm text-[var(--text-main)] uppercase group-hover:text-[#D4AF37] line-clamp-1">
+                        {player.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="bg-[var(--bg-main)] border border-[var(--border-color)] text-[10px] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold">
+                          👕 {player.app} APP
+                        </span>
+                        <span className="bg-[var(--bg-main)] border border-[var(--border-color)] text-[10px] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold">
+                          ✔ {player.w} W
                         </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-black text-base text-[#D4AF37]">{scorer.goals}</div>
-                      <span className="text-[9px] text-[var(--text-muted)] uppercase">GOALS</span>
+                  </div>
+
+                  <div className="text-right pl-2">
+                    <div className="text-lg md:text-xl font-black text-[#D4AF37]">
+                      {player.pts}
+                    </div>
+                    <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase block -mt-1">
+                      {activeTab === "OVERALL" ? "RATING" : "POINTS"}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    isExpanded ? "max-h-24 opacity-100 mt-4 pt-3 border-t border-[var(--border-color)]" : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                      <span className="text-[9px] text-[var(--text-muted)] font-bold block">WIN %</span>
+                      <span className="text-xs font-black text-[#D4AF37]">{winRate}%</span>
+                    </div>
+                    <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                      <span className="text-[9px] text-[var(--text-muted)] font-bold block">GF</span>
+                      <span className="text-xs font-black text-[var(--text-main)]">{player.gf}</span>
+                    </div>
+                    <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                      <span className="text-[9px] text-[var(--text-muted)] font-bold block">GA</span>
+                      <span className="text-xs font-black text-[var(--text-main)]">{player.ga}</span>
+                    </div>
+                    <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
+                      <span className="text-[9px] text-[var(--text-muted)] font-bold block">GD</span>
+                      <span className={`text-xs font-black ${gd >= 0 ? "text-green-500" : "text-red-500"}`}>
+                        {gd > 0 ? `+${gd}` : gd}
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })}
+        </div>
 
       </div>
     </div>
