@@ -1,35 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
-
-interface ThemeContextType {
-  isDarkMode: boolean;
-  toggleTheme: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-function ThemeStateProvider({ children }: { children: ReactNode }) {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDarkMode = mounted ? resolvedTheme === "dark" : true;
-
-  const toggleTheme = () => {
-    setTheme(isDarkMode ? "light" : "dark");
-  };
-
-  return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
+import React, { ReactNode } from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
@@ -39,15 +11,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       enableSystem={false}
       storageKey="cw_theme_preference"
     >
-      <ThemeStateProvider>{children}</ThemeStateProvider>
+      {children}
     </NextThemesProvider>
   );
 }
-
-export const useAppTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useAppTheme must be used within a Providers wrapper");
-  }
-  return context;
-};

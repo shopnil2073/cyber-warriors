@@ -3,16 +3,25 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useTheme } from "next-themes";
 import { getStoredTicker } from "./utils/tournamentStore";
 
 export default function Home() {
   const taglineText = "Driven by Passion. Defined by Glory.";
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<"dark" | "light">("dark");
   const [rankingTab, setRankingTab] = useState<"OVERALL" | "MONTHLY" | "WEEKLY">("OVERALL");
   const [ticker, setTicker] = useState("🔥 CYBER WARRIORS SOLO CHAMPIONSHIP SEASON 1 FIXTURES ARE NOW LIVE!");
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  const { theme, resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
 
   const newsItems = [
     {
@@ -53,21 +62,6 @@ export default function Home() {
   useEffect(() => {
     const activeTicker = getStoredTicker();
     if (activeTicker) setTicker(activeTicker);
-
-    const updateTheme = () => {
-      const activeTheme = document.documentElement.getAttribute("data-theme") as "dark" | "light";
-      setCurrentTheme(activeTheme || "dark");
-    };
-
-    updateTheme();
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme", "class"],
-    });
-
-    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -114,12 +108,11 @@ export default function Home() {
         <div className="max-w-4xl mx-auto relative z-10 py-6">
           <div className="flex justify-center mb-2">
             <div className="relative w-64 h-64 md:w-80 md:h-80 p-2 flex items-center justify-center drop-shadow-[0_0_25px_rgba(212,175,55,0.4)] transition-all duration-300">
-              <Image
-                src={currentTheme === "light" ? "/logo-light.jpg" : "/logo.jpg"}
+              {/* Homepage Hero Banner Logo Dynamic Switch */}
+              <img
+                src={isDark ? "/logo.jpg" : "/logo-light.jpg"}
                 alt="Cyber Warriors Banner Logo"
-                fill
-                className="object-contain transition-all duration-300"
-                priority
+                className="w-full h-full object-contain transition-all duration-300"
               />
             </div>
           </div>
