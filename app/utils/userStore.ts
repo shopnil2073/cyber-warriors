@@ -14,6 +14,8 @@ export interface UserProfile {
   dob: string;
   facebook?: string;
   whatsapp?: string;
+  discord?: string;
+  cobegId?: string;
   status: string;
 }
 
@@ -29,16 +31,20 @@ export const EMPTY_USER: UserProfile = {
   bloodGroup: "Not Set",
   dob: "Not Set",
   status: "Free Agent",
+  facebook: "",
+  whatsapp: "",
+  discord: "",
+  cobegId: "",
 };
 
-// ১. নতুন ইউজার রেজিস্টার
+// 1. New Player Registration
 export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> => {
   try {
     const { data: existing } = await supabase
       .from("players")
       .select("id")
       .eq("email", newUser.email)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       console.error("Email already registered");
@@ -62,7 +68,7 @@ export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> 
     ]);
 
     if (error) {
-      console.error("Supabase Insert Error:", error);
+      console.error("Supabase Insert Error:", error.message, error.details);
       return false;
     }
 
@@ -73,7 +79,7 @@ export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> 
   }
 };
 
-// ২. প্লেয়ার সাইন ইন
+// 2. Player Sign In
 export const loginPlayer = async (email: string, pass: string): Promise<UserProfile | null> => {
   try {
     const { data: u, error } = await supabase
@@ -81,9 +87,12 @@ export const loginPlayer = async (email: string, pass: string): Promise<UserProf
       .select("*")
       .eq("email", email)
       .eq("password", pass)
-      .single();
+      .maybeSingle();
 
-    if (error || !u) return null;
+    if (error || !u) {
+      if (error) console.error("Login Query Error:", error.message);
+      return null;
+    }
 
     const userProfile: UserProfile = {
       id: u.id,
@@ -99,6 +108,8 @@ export const loginPlayer = async (email: string, pass: string): Promise<UserProf
       status: u.status || "Free Agent",
       facebook: u.facebook || "",
       whatsapp: u.whatsapp || "",
+      discord: u.discord || "",
+      cobegId: u.cobeg_id || "",
     };
 
     if (typeof window !== "undefined") {
@@ -106,12 +117,12 @@ export const loginPlayer = async (email: string, pass: string): Promise<UserProf
     }
     return userProfile;
   } catch (err) {
-    console.error("Login Error:", err);
+    console.error("Login Exception:", err);
     return null;
   }
 };
 
-// ৩. একটিভ ইউজার রিড
+// 3. Get Active User
 export const getActiveUser = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -122,7 +133,46 @@ export const getActiveUser = (): UserProfile | null => {
   }
 };
 
-// ৪. প্রোফাইল এডিট ও আপডেট (Supabase DB-তে সেভ হবে)
+// 4. Get All Registered Players (Async for Supabase & Fallback to LocalStorage)
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  try {
+    const { data, error } = await supabase.from("players").select("*");
+    if (!error && data && data.length > 0) {
+      return data.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        rank: u.rank_badge || "#NEW",
+        avatar: u.avatar || "/logo.jpg",
+        konamiId: u.konami_id || "Not Set",
+        hardware: u.device || "Not Set",
+        location: u.location || "Not Set",
+        bloodGroup: u.blood_group || "Not Set",
+        dob: u.dob || "Not Set",
+        status: u.status || "Free Agent",
+        facebook: u.facebook || "",
+        whatsapp: u.whatsapp || "",
+        discord: u.discord || "",
+        cobegId: u.cobeg_id || "",
+      }));
+    }
+  } catch (err) {
+    console.error("Fetch players error:", err);
+  }
+
+  // LocalStorage fallback
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("cw_registered_users");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+// 5. Update Profile Data
 export const updateActiveUserProfile = async (updated: UserProfile): Promise<boolean> => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_active_user", JSON.stringify(updated));
@@ -136,13 +186,17 @@ export const updateActiveUserProfile = async (updated: UserProfile): Promise<boo
         konami_id: updated.konamiId,
         device: updated.hardware,
         location: updated.location,
+        blood_group: updated.bloodGroup,
+        dob: updated.dob,
         facebook: updated.facebook,
         whatsapp: updated.whatsapp,
+        discord: updated.discord,
+        cobeg_id: updated.cobegId,
       })
       .eq("email", updated.email);
 
     if (error) {
-      console.error("Update Profile Error:", error);
+      console.error("Update Profile Error:", error.message);
       return false;
     }
     return true;
@@ -152,7 +206,7 @@ export const updateActiveUserProfile = async (updated: UserProfile): Promise<boo
   }
 };
 
-// ৫. সাইন আউট
+// 6. Sign Out Player
 export const logoutPlayer = () => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("cw_active_user");

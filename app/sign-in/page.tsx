@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginPlayer } from "../utils/userStore";
@@ -13,73 +12,95 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    const user = loginPlayer(email, password);
-    if (user) {
-      window.dispatchEvent(new Event("cw_auth_change"));
-      router.push("/profile");
-    } else {
-      setError("Email athoba password bhul diyechen!");
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Async login query to Database
+      const user = await loginPlayer(email.trim(), password.trim());
+
+      if (user) {
+        window.dispatchEvent(new Event("cw_auth_change"));
+        router.push("/profile");
+      } else {
+        setError("Invalid email or password! Please check your credentials.");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0D14] text-white flex items-center justify-center p-4 pb-24 font-sans">
-      <div className="bg-[#111520] border border-[#23293A] rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 flex items-center justify-center p-4 pb-24 font-sans selection:bg-[#D4AF37] selection:text-black">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6">
+        
+        {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-black tracking-wide text-white font-serif">
+          <h1 className="text-2xl font-black tracking-wide text-[var(--text-main)] font-serif">
             Welcome Back
           </h1>
-          <p className="text-xs text-gray-400 font-medium">
+          <p className="text-xs text-[var(--text-muted)] font-medium">
             Enter your credentials to access the club
           </p>
         </div>
 
+        {/* Error Alert Box */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/40 text-red-400 text-xs font-bold p-3 rounded-xl text-center">
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-xs font-black p-3.5 rounded-xl text-center shadow-md animate-bounce">
             ⚠️ {error}
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4 text-xs font-bold">
+          
           {/* Email Input */}
           <div className="relative flex items-center">
-            <span className="absolute left-4 text-gray-400 text-base">✉️</span>
+            <span className="absolute left-4 text-[var(--text-muted)] text-base">✉️</span>
             <input
               type="email"
               required
               placeholder="Email Address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-4 py-3.5 rounded-xl text-white outline-none font-medium placeholder-gray-500"
+              className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] focus:border-[#D4AF37] pl-11 pr-4 py-3.5 rounded-xl text-[var(--text-main)] outline-none font-medium placeholder-[var(--text-muted)] transition-colors"
             />
           </div>
 
-          {/* Password Input with Eye Toggle */}
+          {/* Password Input */}
           <div className="relative flex items-center">
-            <span className="absolute left-4 text-gray-400 text-base">🔒</span>
+            <span className="absolute left-4 text-[var(--text-muted)] text-base">🔒</span>
             <input
               type={showPassword ? "text" : "password"}
               required
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#0A0D14] border border-[#23293A] focus:border-[#D4AF37] pl-11 pr-11 py-3.5 rounded-xl text-white outline-none font-medium placeholder-gray-500"
+              className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] focus:border-[#D4AF37] pl-11 pr-11 py-3.5 rounded-xl text-[var(--text-main)] outline-none font-medium placeholder-[var(--text-muted)] transition-colors"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 text-gray-400 hover:text-[#D4AF37] text-sm focus:outline-none"
+              className="absolute right-4 text-[var(--text-muted)] hover:text-[#D4AF37] text-sm focus:outline-none cursor-pointer"
             >
               {showPassword ? "👁️" : "🙈"}
             </button>
           </div>
 
-          {/* Remember Me Checkbox */}
+          {/* Remember Me */}
           <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
@@ -88,7 +109,7 @@ export default function SignInPage() {
               onChange={(e) => setRememberMe(e.target.checked)}
               className="accent-[#D4AF37] w-4 h-4 rounded cursor-pointer"
             />
-            <label htmlFor="remember" className="text-gray-300 text-xs font-semibold cursor-pointer select-none">
+            <label htmlFor="remember" className="text-[var(--text-muted)] text-xs font-semibold cursor-pointer select-none">
               Remember me
             </label>
           </div>
@@ -96,13 +117,15 @@ export default function SignInPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black font-black py-3.5 rounded-xl uppercase tracking-widest hover:brightness-110 shadow-lg cursor-pointer transition-all mt-2"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black font-black py-3.5 rounded-xl uppercase tracking-widest hover:brightness-110 shadow-lg cursor-pointer transition-all mt-2 disabled:opacity-50"
           >
-            SIGN IN
+            {loading ? "AUTHENTICATING..." : "SIGN IN"}
           </button>
         </form>
 
-        <div className="text-center pt-3 border-t border-[#23293A] text-xs font-medium text-gray-400 flex justify-center items-center gap-1.5">
+        {/* Footer Link */}
+        <div className="text-center pt-3 border-t border-[var(--border-color)] text-xs font-medium text-[var(--text-muted)] flex justify-center items-center gap-1.5">
           <span>Don't have a membership?</span>
           <Link
             href="/register"
@@ -111,6 +134,7 @@ export default function SignInPage() {
             Create Account
           </Link>
         </div>
+
       </div>
     </div>
   );
