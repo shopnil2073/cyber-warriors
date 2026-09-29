@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getActiveUser } from "../utils/userStore";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,15 +14,51 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: SidebarProps) {
   const [userName, setUserName] = useState<string | null>(null);
+  const [hasCommandCenterAccess, setHasCommandCenterAccess] = useState<boolean>(false);
+
+  // Super Admin Email (Primary Master Control)
+  const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("cw_user_name"); 
-    if (storedUser) {
-      const nameParts = storedUser.trim().split(" ");
-      const lastName = nameParts[nameParts.length - 1];
-      setUserName(lastName);
+    const checkUserAccess = () => {
+      const activeUser = getActiveUser();
+
+      if (activeUser && activeUser.email) {
+        // Set display name
+        if (activeUser.name) {
+          const nameParts = activeUser.name.trim().split(" ");
+          setUserName(nameParts[nameParts.length - 1]);
+        }
+
+        const userEmail = activeUser.email.toLowerCase().trim();
+
+        // Check if user is Super Admin
+        if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
+          setHasCommandCenterAccess(true);
+          return;
+        }
+
+        // Check dynamically granted admin emails from localStorage / Database
+        try {
+          const grantedAdmins = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
+          const isGranted = Array.isArray(grantedAdmins) && grantedAdmins.some(
+            (email: string) => email.toLowerCase().trim() === userEmail
+          );
+
+          setHasCommandCenterAccess(isGranted);
+        } catch (err) {
+          setHasCommandCenterAccess(false);
+        }
+      } else {
+        setUserName(null);
+        setHasCommandCenterAccess(false);
+      }
+    };
+
+    if (isOpen) {
+      checkUserAccess();
     }
-  }, []);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -41,7 +78,7 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               </h2>
             </div>
             
-            {/* Close Button (Large Golden X like trc-bd) */}
+            {/* Close Button */}
             <button 
               onClick={onClose} 
               className="text-[#D4AF37] hover:text-white text-3xl font-bold p-2 transition-all cursor-pointer"
@@ -189,17 +226,57 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               <span className="text-gray-500 group-hover:text-white text-lg">›</span>
             </Link>
           </div>
-        </div>
 
-        {/* Footer Account Link */}
-        <div className="pt-4 border-t border-[#23293A] pb-8">
-          <Link
-            href="/sign-in"
-            onClick={onClose}
-            className="w-full block text-center py-3.5 rounded-xl font-black text-xs md:text-sm uppercase tracking-widest bg-[#D4AF37] text-black hover:brightness-110 transition-all shadow-lg"
-          >
-            {userName ? "LOGOUT" : "SIGN IN TO ACCOUNT"}
-          </Link>
+          {/* COMMAND CENTER Section - Restricted to Authorized Admins */}
+          {hasCommandCenterAccess && (
+            <div className="bg-[#121624] rounded-2xl p-4 md:p-5 border border-[#D4AF37]/40 space-y-3 mb-8 shadow-lg animate-fadeIn">
+              <span className="text-xs font-black uppercase tracking-widest text-[#D4AF37] flex items-center gap-2 mb-2">
+                <span>⚡</span> COMMAND CENTER
+              </span>
+              
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#1A2035] border border-[#D4AF37]/30 flex items-center justify-center text-base text-[#D4AF37]">
+                    📟
+                  </div>
+                  <span className="font-extrabold text-sm md:text-base text-white group-hover:text-[#D4AF37]">Admin Console</span>
+                </div>
+                <span className="text-gray-500 group-hover:text-white text-lg">›</span>
+              </Link>
+
+              <Link
+                href="/matchday"
+                onClick={onClose}
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#1A2035] border border-[#D4AF37]/30 flex items-center justify-center text-base text-[#D4AF37]">
+                    📋
+                  </div>
+                  <span className="font-extrabold text-sm md:text-base text-white group-hover:text-[#D4AF37]">Matchday HQ</span>
+                </div>
+                <span className="text-gray-500 group-hover:text-white text-lg">›</span>
+              </Link>
+
+              <Link
+                href="/news-panel"
+                onClick={onClose}
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#1A2035] border border-[#D4AF37]/30 flex items-center justify-center text-base text-[#D4AF37]">
+                    ✍️
+                  </div>
+                  <span className="font-extrabold text-sm md:text-base text-white group-hover:text-[#D4AF37]">News Panel</span>
+                </div>
+                <span className="text-gray-500 group-hover:text-white text-lg">›</span>
+              </Link>
+            </div>
+          )}
         </div>
 
       </div>

@@ -13,11 +13,12 @@ import {
   Fixture,
   Standing,
 } from "../utils/tournamentStore";
+import { getActiveUser } from "../utils/userStore";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState<"add-match" | "edit-match" | "edit-player" | "news" | "ticker">("add-match");
+  const [activeTab, setActiveTab] = useState<"add-match" | "edit-match" | "edit-player" | "news" | "ticker" | "manage-admins">("add-match");
 
   // Local Component States
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -39,6 +40,42 @@ export default function AdminDashboard() {
 
   const [tickerText, setTickerText] = useState("");
 
+  // Super Admin & Dynamic Admin Access Control States
+  const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [adminEmailsList, setAdminEmailsList] = useState<string[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+
+  // Check login & load allowed admins
+  useEffect(() => {
+    const activeUser = getActiveUser();
+    if (activeUser && activeUser.email) {
+      const userEmail = activeUser.email.toLowerCase().trim();
+
+      if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        setIsAuthenticated(true);
+        setIsSuperAdmin(true);
+      } else {
+        try {
+          const granted = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
+          if (Array.isArray(granted) && granted.some((e: string) => e.toLowerCase().trim() === userEmail)) {
+            setIsAuthenticated(true);
+          }
+        } catch (e) {
+          console.error("Error reading admin emails", e);
+        }
+      }
+    }
+
+    // Load admin email list
+    try {
+      const savedAdmins = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
+      setAdminEmailsList(savedAdmins);
+    } catch (e) {
+      setAdminEmailsList([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated) {
       setFixtures(getStoredFixtures());
@@ -49,8 +86,37 @@ export default function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "cyber123") setIsAuthenticated(true);
-    else alert("Wrong Admin Password!");
+    if (password === "cyber123") {
+      setIsAuthenticated(true);
+    } else {
+      alert("Wrong Admin Password!");
+    }
+  };
+
+  // Add new email to Command Center Access list
+  const handleAddAdminEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formattedEmail = newAdminEmail.toLowerCase().trim();
+    if (!formattedEmail) return;
+
+    if (adminEmailsList.includes(formattedEmail)) {
+      alert("This email already has Admin Access!");
+      return;
+    }
+
+    const updatedList = [...adminEmailsList, formattedEmail];
+    setAdminEmailsList(updatedList);
+    localStorage.setItem("cw_admin_emails", JSON.stringify(updatedList));
+    setNewAdminEmail("");
+    alert(`Command Center access granted to: ${formattedEmail}`);
+  };
+
+  // Remove email from Command Center Access list
+  const handleRemoveAdminEmail = (emailToRemove: string) => {
+    const updatedList = adminEmailsList.filter((e) => e !== emailToRemove);
+    setAdminEmailsList(updatedList);
+    localStorage.setItem("cw_admin_emails", JSON.stringify(updatedList));
+    alert(`Access revoked for: ${emailToRemove}`);
   };
 
   // 1. Add Match
@@ -137,16 +203,20 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="flex justify-between items-center bg-[var(--bg-card)] border border-[var(--border-color)] p-4 rounded-xl">
+        <div className="flex justify-between items-center bg-[var(--bg-card)] border border-[var(--border-color)] p-4 rounded-xl shadow-md">
           <div>
-            <h1 className="text-lg font-black text-[#D4AF37] uppercase">⚡ CYBER WARRIORS ADMIN HUB</h1>
-            <p className="text-[10px] text-[var(--text-muted)]">Full Web Content Control Panel</p>
+            <h1 className="text-lg font-black text-[#D4AF37] uppercase flex items-center gap-2">
+              ⚡ CYBER WARRIORS ADMIN HUB
+            </h1>
+            <p className="text-[10px] text-[var(--text-muted)] font-bold">
+              {isSuperAdmin ? "👑 SUPER ADMIN MASTER ACCESS" : "🛡️ AUTHORIZED ADMIN ACCESS"}
+            </p>
           </div>
-          <button onClick={() => setIsAuthenticated(false)} className="text-xs font-bold text-red-400 border border-red-500/30 px-3 py-1 rounded-lg hover:bg-red-500/10">
+          <button onClick={() => setIsAuthenticated(false)} className="text-xs font-bold text-red-400 border border-red-500/30 px-3 py-1 rounded-lg hover:bg-red-500/10 cursor-pointer">
             LOGOUT
           </button>
         </div>
@@ -159,11 +229,12 @@ export default function AdminDashboard() {
             { id: "edit-player", label: "👤 PLAYER INFO" },
             { id: "news", label: "📰 POST NEWS" },
             { id: "ticker", label: "📢 TICKER NOTICE" },
+            ...(isSuperAdmin ? [{ id: "manage-admins", label: "🛡️ MANAGE ADMIN ACCESS" }] : []),
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`text-xs font-extrabold px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+              className={`text-xs font-extrabold px-4 py-2 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === tab.id ? "bg-[#D4AF37] text-black shadow-md" : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-white"
               }`}
             >
@@ -185,7 +256,7 @@ export default function AdminDashboard() {
                 <input type="text" required placeholder="Player 2 Name" value={matchData.p2Name} onChange={(e) => setMatchData({ ...matchData, p2Name: e.target.value })} className="bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
                 <input type="number" required placeholder="Player 2 Score" value={matchData.p2Score} onChange={(e) => setMatchData({ ...matchData, p2Score: Number(e.target.value) })} className="bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
               </div>
-              <button type="submit" className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-2.5 rounded hover:scale-[1.01]">SAVE MATCH</button>
+              <button type="submit" className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-2.5 rounded hover:scale-[1.01] cursor-pointer">SAVE MATCH</button>
             </form>
           </div>
         )}
@@ -205,7 +276,7 @@ export default function AdminDashboard() {
                 <input type="number" placeholder="New Player 1 Score" value={editP1Score} onChange={(e) => setEditP1Score(Number(e.target.value))} className="bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
                 <input type="number" placeholder="New Player 2 Score" value={editP2Score} onChange={(e) => setEditP2Score(Number(e.target.value))} className="bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
               </div>
-              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded">UPDATE SCORE</button>
+              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded cursor-pointer">UPDATE SCORE</button>
             </form>
           </div>
         )}
@@ -228,7 +299,7 @@ export default function AdminDashboard() {
               </select>
               <input type="text" placeholder="Player Name" value={editPlayerName} onChange={(e) => setEditPlayerName(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
               <input type="number" placeholder="Total Points" value={editPlayerPts} onChange={(e) => setEditPlayerPts(Number(e.target.value))} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
-              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded">UPDATE PLAYER DATA</button>
+              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded cursor-pointer">UPDATE PLAYER DATA</button>
             </form>
           </div>
         )}
@@ -240,7 +311,7 @@ export default function AdminDashboard() {
             <form onSubmit={handlePostNews} className="space-y-4">
               <input type="text" required placeholder="News Title" value={newsTitle} onChange={(e) => setNewsTitle(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
               <textarea rows={3} required placeholder="News Article Details..." value={newsContent} onChange={(e) => setNewsContent(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
-              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded">PUBLISH NEWS</button>
+              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded cursor-pointer">PUBLISH NEWS</button>
             </form>
           </div>
         )}
@@ -251,8 +322,66 @@ export default function AdminDashboard() {
             <h2 className="text-sm font-bold text-[#D4AF37] uppercase mb-4">UPDATE HOMEPAGE ANNOUNCEMENT TICKER</h2>
             <form onSubmit={handleUpdateTicker} className="space-y-4">
               <input type="text" required placeholder="e.g. 📢 Matchday 11 Registration is now OPEN!" value={tickerText} onChange={(e) => setTickerText(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-2 text-xs rounded" />
-              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded">UPDATE TICKER TEXT</button>
+              <button type="submit" className="w-full bg-[#D4AF37] text-black font-bold text-xs py-2 rounded cursor-pointer">UPDATE TICKER TEXT</button>
             </form>
+          </div>
+        )}
+
+        {/* TAB 6: MANAGE ADMIN ACCESS (SUPER ADMIN ONLY) */}
+        {activeTab === "manage-admins" && isSuperAdmin && (
+          <div className="bg-[var(--bg-card)] border border-[#D4AF37]/50 rounded-xl p-6 shadow-md space-y-6">
+            <div>
+              <h2 className="text-sm font-bold text-[#D4AF37] uppercase flex items-center gap-2">
+                <span>🛡️</span> GRANT COMMAND CENTER ACCESS
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                Enter an email address to allow them to see and access the Command Center menu & Admin Hub.
+              </p>
+            </div>
+
+            <form onSubmit={handleAddAdminEmail} className="flex gap-2">
+              <input
+                type="email"
+                required
+                placeholder="Enter user email (e.g. user@gmail.com)"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-2.5 text-xs rounded-lg text-white focus:border-[#D4AF37] outline-none"
+              />
+              <button
+                type="submit"
+                className="bg-[#D4AF37] text-black font-extrabold text-xs px-5 py-2.5 rounded-lg hover:brightness-110 transition-all cursor-pointer uppercase"
+              >
+                GRANT ACCESS
+              </button>
+            </form>
+
+            <div className="border-t border-[var(--border-color)] pt-4 space-y-3">
+              <h3 className="text-xs font-black uppercase text-[var(--text-main)] tracking-wider">
+                CURRENT AUTHORIZED ADMINS ({adminEmailsList.length})
+              </h3>
+
+              {adminEmailsList.length === 0 ? (
+                <p className="text-xs text-[var(--text-muted)] italic">No additional admins granted yet. Only Super Admin has access.</p>
+              ) : (
+                <div className="space-y-2">
+                  {adminEmailsList.map((email) => (
+                    <div
+                      key={email}
+                      className="flex justify-between items-center bg-[var(--bg-main)] border border-[var(--border-color)] p-3 rounded-lg"
+                    >
+                      <span className="text-xs font-mono text-[#D4AF37] font-bold">{email}</span>
+                      <button
+                        onClick={() => handleRemoveAdminEmail(email)}
+                        className="text-[10px] font-bold text-red-400 hover:text-red-300 border border-red-500/30 px-2.5 py-1 rounded bg-red-500/10 cursor-pointer uppercase"
+                      >
+                        REVOKE ACCESS
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

@@ -38,7 +38,7 @@ export default function RankingPage() {
       setLoading(true);
       try {
         const allUsers: UserProfile[] = await getAllUsers();
-        
+
         const formatted: PlayerRank[] = allUsers.map((p: any, idx: number) => {
           const app = Number(p.matches || p.matches_played || 0);
           const w = Number(p.wins || p.soloWins || 0);
@@ -104,7 +104,7 @@ export default function RankingPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 pb-28 font-sans">
-      
+
       {/* Header Banner */}
       <div className="relative w-full py-10 px-4 text-center border-b border-[var(--border-color)] bg-[var(--bg-card)] transition-colors duration-300">
         <div className="relative z-10 space-y-2">
@@ -123,7 +123,7 @@ export default function RankingPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 mt-6">
-        
+
         {/* Navigation Tabs */}
         <div className="grid grid-cols-4 bg-[var(--bg-card)] p-1.5 rounded-xl border border-[var(--border-color)] mb-6 transition-colors duration-300">
           {(["OVERALL", "SEASONAL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
@@ -213,7 +213,7 @@ export default function RankingPage() {
             {filteredPlayers.map((player, index) => {
               const rankNum = index + 1;
               const isExpanded = expandedCardId === player.id;
-              
+
               // Winrate capped at maximum 100%
               const rawWinRate = player.app > 0 ? Math.round((player.w / player.app) * 100) : 0;
               const winRate = Math.min(100, Math.max(0, rawWinRate));
@@ -231,8 +231,7 @@ export default function RankingPage() {
               return (
                 <div
                   key={player.id}
-                  onClick={() => router.push(`/profile?id=${player.id}`)}
-                  className={`bg-[var(--bg-card)] border rounded-2xl p-4 cursor-pointer transition-all duration-300 relative overflow-hidden group hover:scale-[1.02] shadow-sm ${
+                  className={`bg-[var(--bg-card)] border rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm ${
                     rankNum === 1
                       ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                       : "border-[var(--border-color)] hover:border-[#D4AF37]/50"
@@ -240,8 +239,12 @@ export default function RankingPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[var(--border-color)] group-hover:border-[#D4AF37] bg-black">
+                      <div
+                        onClick={() => router.push(`/profile?id=${player.id}`)}
+                        className="relative cursor-pointer hover:scale-105 transition-transform"
+                        title="View Profile"
+                      >
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[var(--border-color)] hover:border-[#D4AF37] bg-black">
                           <Image src={player.avatar || "/logo.jpg"} alt={player.name} fill className="object-cover" />
                         </div>
                         <span className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black text-[9px] font-black px-1.5 py-0.5 rounded-md">
@@ -250,7 +253,11 @@ export default function RankingPage() {
                       </div>
 
                       <div>
-                        <h3 className="font-extrabold text-xs md:text-sm text-[var(--text-main)] uppercase group-hover:text-[#D4AF37] line-clamp-1">
+                        <h3
+                          onClick={() => router.push(`/profile?id=${player.id}`)}
+                          className="font-extrabold text-xs md:text-sm text-[var(--text-main)] uppercase hover:text-[#D4AF37] cursor-pointer transition-colors line-clamp-1"
+                          title="View Profile"
+                        >
                           {player.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
@@ -276,7 +283,7 @@ export default function RankingPage() {
 
                       <button
                         onClick={(e) => toggleCard(player.id, e)}
-                        className="w-7 h-7 rounded-lg bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[#D4AF37] flex items-center justify-center text-xs font-bold"
+                        className="w-7 h-7 rounded-lg bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[#D4AF37] flex items-center justify-center text-xs font-bold cursor-pointer"
                         title="Toggle Stats"
                       >
                         {isExpanded ? "▲" : "▼"}
