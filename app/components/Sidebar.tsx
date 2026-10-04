@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getActiveUser } from "../utils/userStore";
@@ -19,46 +19,57 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
   // Super Admin Email (Primary Master Control)
   const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
 
-  useEffect(() => {
-    const checkUserAccess = () => {
-      const activeUser = getActiveUser();
+  const checkUserAccess = useCallback(() => {
+    const activeUser = getActiveUser();
 
-      if (activeUser && activeUser.email) {
-        // Set display name
-        if (activeUser.name) {
-          const nameParts = activeUser.name.trim().split(" ");
-          setUserName(nameParts[nameParts.length - 1]);
-        }
-
-        const userEmail = activeUser.email.toLowerCase().trim();
-
-        // Check if user is Super Admin
-        if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
-          setHasCommandCenterAccess(true);
-          return;
-        }
-
-        // Check dynamically granted admin emails from localStorage / Database
-        try {
-          const grantedAdmins = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
-          const isGranted = Array.isArray(grantedAdmins) && grantedAdmins.some(
-            (email: string) => email.toLowerCase().trim() === userEmail
-          );
-
-          setHasCommandCenterAccess(isGranted);
-        } catch (err) {
-          setHasCommandCenterAccess(false);
-        }
+    if (activeUser && activeUser.email) {
+      // Set display name
+      if (activeUser.name) {
+        const nameParts = activeUser.name.trim().split(" ");
+        setUserName(nameParts[nameParts.length - 1]);
       } else {
         setUserName(null);
+      }
+
+      const userEmail = activeUser.email.toLowerCase().trim();
+
+      // 1. Check if user is Super Admin
+      if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        setHasCommandCenterAccess(true);
+        return;
+      }
+
+      // 2. Check dynamically granted admin emails from localStorage / Database
+      try {
+        const grantedAdmins = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
+        const isGranted = Array.isArray(grantedAdmins) && grantedAdmins.some(
+          (email: string) => email.toLowerCase().trim() === userEmail
+        );
+
+        setHasCommandCenterAccess(isGranted);
+      } catch (err) {
         setHasCommandCenterAccess(false);
+      }
+    } else {
+      setUserName(null);
+      setHasCommandCenterAccess(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial check when component mounts or opens
+    checkUserAccess();
+
+    // Event listener for cross-tab or instant localStorage updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cw_admin_emails" || e.key === "cw_active_user") {
+        checkUserAccess();
       }
     };
 
-    if (isOpen) {
-      checkUserAccess();
-    }
-  }, [isOpen]);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [isOpen, checkUserAccess]);
 
   if (!isOpen) return null;
 
