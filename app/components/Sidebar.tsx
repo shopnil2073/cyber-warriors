@@ -16,8 +16,14 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
   const [userName, setUserName] = useState<string | null>(null);
   const [hasCommandCenterAccess, setHasCommandCenterAccess] = useState<boolean>(false);
 
-  // Super Admin Email (Primary Master Control)
+  // 1. Super Admin Email (Primary Master Control)
   const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
+
+  // 2. Global Authorized Admin List (Hardcoded Fallback for All Devices)
+  const ALLOWED_ADMIN_EMAILS = [
+    "samiaakter2073@gmail.com",
+    "samiulakter2075@gmail.com",
+  ];
 
   const checkUserAccess = useCallback(() => {
     const activeUser = getActiveUser();
@@ -33,23 +39,33 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
 
       const userEmail = activeUser.email.toLowerCase().trim();
 
-      // 1. Check if user is Super Admin
+      // Check 1: Super Admin
       if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
         setHasCommandCenterAccess(true);
         return;
       }
 
-      // 2. Check dynamically granted admin emails from localStorage / Database
-      try {
-        const grantedAdmins = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
-        const isGranted = Array.isArray(grantedAdmins) && grantedAdmins.some(
-          (email: string) => email.toLowerCase().trim() === userEmail
-        );
+      // Check 2: Hardcoded Allowed Admin List (Works cross-device instantly)
+      const isHardcodedAdmin = ALLOWED_ADMIN_EMAILS.map((e) =>
+        e.toLowerCase().trim()
+      ).includes(userEmail);
 
-        setHasCommandCenterAccess(isGranted);
+      // Check 3: LocalStorage Dynamic Admin List (Same-device dynamic grants)
+      let isLocalStorageAdmin = false;
+      try {
+        const grantedAdmins = JSON.parse(
+          localStorage.getItem("cw_admin_emails") || "[]"
+        );
+        isLocalStorageAdmin =
+          Array.isArray(grantedAdmins) &&
+          grantedAdmins.some(
+            (email: string) => email.toLowerCase().trim() === userEmail
+          );
       } catch (err) {
-        setHasCommandCenterAccess(false);
+        isLocalStorageAdmin = false;
       }
+
+      setHasCommandCenterAccess(isHardcodedAdmin || isLocalStorageAdmin);
     } else {
       setUserName(null);
       setHasCommandCenterAccess(false);
