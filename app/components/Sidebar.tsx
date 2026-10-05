@@ -21,7 +21,11 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
 
   // 2. Global Authorized Admin List (Hardcoded Fallback for All Devices)
   const ALLOWED_ADMIN_EMAILS = [
+    "razibulislamhridoy@gmail.com",
     "samiaakter2073@gmail.com",
+    "hmmamun2010@gmail.com",
+    "tanjimuddin1437@gmail.com",
+    "akasharsenal14@gmail.com",
     "samiulakter2075@gmail.com",
   ];
 

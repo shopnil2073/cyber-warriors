@@ -42,6 +42,16 @@ export default function AdminDashboard() {
 
   // Super Admin & Dynamic Admin Access Control States
   const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
+  
+  // Permanent Authorized Admins List
+  const HARDCODED_ADMINS = [
+    "razibulislamhridoy@gmail.com",
+    "samiaakter2073@gmail.com",
+    "hmmamun2010@gmail.com",
+    "tanjimuddin1437@gmail.com",
+    "akasharsenal14@gmail.com",
+  ];
+
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [adminEmailsList, setAdminEmailsList] = useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -52,17 +62,25 @@ export default function AdminDashboard() {
     if (activeUser && activeUser.email) {
       const userEmail = activeUser.email.toLowerCase().trim();
 
+      // Check 1: Super Admin
       if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
         setIsAuthenticated(true);
         setIsSuperAdmin(true);
       } else {
+        // Check 2: Hardcoded Admins List
+        const isHardcodedAdmin = HARDCODED_ADMINS.map((e) => e.toLowerCase().trim()).includes(userEmail);
+
+        // Check 3: LocalStorage Dynamic Admin List
+        let isDynamicAdmin = false;
         try {
           const granted = JSON.parse(localStorage.getItem("cw_admin_emails") || "[]");
-          if (Array.isArray(granted) && granted.some((e: string) => e.toLowerCase().trim() === userEmail)) {
-            setIsAuthenticated(true);
-          }
+          isDynamicAdmin = Array.isArray(granted) && granted.some((e: string) => e.toLowerCase().trim() === userEmail);
         } catch (e) {
           console.error("Error reading admin emails", e);
+        }
+
+        if (isHardcodedAdmin || isDynamicAdmin) {
+          setIsAuthenticated(true);
         }
       }
     }
@@ -99,7 +117,7 @@ export default function AdminDashboard() {
     const formattedEmail = newAdminEmail.toLowerCase().trim();
     if (!formattedEmail) return;
 
-    if (adminEmailsList.includes(formattedEmail)) {
+    if (adminEmailsList.includes(formattedEmail) || HARDCODED_ADMINS.includes(formattedEmail)) {
       alert("This email already has Admin Access!");
       return;
     }
@@ -358,11 +376,22 @@ export default function AdminDashboard() {
 
             <div className="border-t border-[var(--border-color)] pt-4 space-y-3">
               <h3 className="text-xs font-black uppercase text-[var(--text-main)] tracking-wider">
-                CURRENT AUTHORIZED ADMINS ({adminEmailsList.length})
+                PERMANENT AUTHORIZED ADMINS ({HARDCODED_ADMINS.length})
               </h3>
+              <div className="space-y-2">
+                {HARDCODED_ADMINS.map((email) => (
+                  <div key={email} className="flex justify-between items-center bg-[var(--bg-main)] border border-[var(--border-color)] p-3 rounded-lg opacity-80">
+                    <span className="text-xs font-mono text-[#D4AF37] font-bold">{email}</span>
+                    <span className="text-[10px] text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded bg-emerald-500/10 font-bold uppercase">HARDCODED ADMIN</span>
+                  </div>
+                ))}
+              </div>
 
+              <h3 className="text-xs font-black uppercase text-[var(--text-main)] tracking-wider pt-3">
+                DYNAMIC AUTHORIZED ADMINS ({adminEmailsList.length})
+              </h3>
               {adminEmailsList.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] italic">No additional admins granted yet. Only Super Admin has access.</p>
+                <p className="text-xs text-[var(--text-muted)] italic">No additional dynamic admins granted yet.</p>
               ) : (
                 <div className="space-y-2">
                   {adminEmailsList.map((email) => (
