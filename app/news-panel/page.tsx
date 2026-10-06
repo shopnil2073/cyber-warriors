@@ -2,52 +2,45 @@
 
 import React, { useState, useEffect } from "react";
 import { getActiveUser } from "../utils/userStore";
-
-export interface Article {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  category: "Announcement" | "Match Report" | "Top Performer" | "Tournament Update" | "Transfer";
-  status: "Published" | "Draft";
-  author: string;
-  imageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { getStoredNews, saveAllNews, NewsItem } from "../utils/tournamentStore";
 
 export default function NewsPanel() {
   const [activeTab, setActiveTab] = useState<"add" | "manage">("add");
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<NewsItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form States
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<Article["category"]>("Announcement");
-  const [status, setStatus] = useState<Article["status"]>("Published");
+  const [category, setCategory] = useState<string>("ANNOUNCEMENT");
+  const [status, setStatus] = useState<string>("Published");
   const [imageUrl, setImageUrl] = useState("");
   const [authorName, setAuthorName] = useState("CYBER WARRIORS ADMIN");
 
-  // Load active user & stored news on load
+  const loadArticles = () => {
+    const data = getStoredNews();
+    setArticles(data);
+  };
+
   useEffect(() => {
     const user = getActiveUser();
     if (user && user.name) {
       setAuthorName(user.name.toUpperCase());
     }
 
-    try {
-      const stored = localStorage.getItem("cw_news_articles");
-      if (stored) {
-        setArticles(JSON.parse(stored));
+    loadArticles();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "cw_news") {
+        loadArticles();
       }
-    } catch (e) {
-      console.error("Error loading articles", e);
-    }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Title type korle Auto Slug Generation
   const handleTitleChange = (val: string) => {
     setTitle(val);
     if (!editingId) {
@@ -60,7 +53,6 @@ export default function NewsPanel() {
     }
   };
 
-  // Image Upload handler (Base64 URL)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -72,21 +64,20 @@ export default function NewsPanel() {
     }
   };
 
-  // Article Save/Update Submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !content) return alert("Please fill in Title and Content!");
 
-    const currentTime = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    const formattedDate = new Date().toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).toUpperCase();
 
-    let updatedArticles: Article[] = [];
+    let updatedList: NewsItem[] = [];
 
     if (editingId) {
-      // Edit Existing Article
-      updatedArticles = articles.map((art) =>
+      updatedList = articles.map((art) =>
         art.id === editingId
           ? {
               ...art,
@@ -96,15 +87,14 @@ export default function NewsPanel() {
               category,
               status,
               imageUrl,
-              updatedAt: currentTime,
+              updatedAt: formattedDate,
             }
           : art
       );
       alert("Article Updated Successfully!");
     } else {
-      // Create New Article
-      const newArticle: Article = {
-        id: "art_" + Date.now(),
+      const newArticle: NewsItem = {
+        id: "n_" + Date.now(),
         title,
         slug: slug || "news-" + Date.now(),
         content,
@@ -112,37 +102,36 @@ export default function NewsPanel() {
         status,
         author: authorName,
         imageUrl,
-        createdAt: currentTime,
-        updatedAt: currentTime,
+        date: formattedDate,
+        createdAt: formattedDate,
+        updatedAt: formattedDate,
       };
-      updatedArticles = [newArticle, ...articles];
+      updatedList = [newArticle, ...articles];
       alert("Article Published Successfully!");
     }
 
-    setArticles(updatedArticles);
-    localStorage.setItem("cw_news_articles", JSON.stringify(updatedArticles));
+    setArticles(updatedList);
+    saveAllNews(updatedList);
     resetForm();
     setActiveTab("manage");
   };
 
-  // Edit Action
-  const handleEdit = (art: Article) => {
+  const handleEdit = (art: NewsItem) => {
     setEditingId(art.id);
     setTitle(art.title);
-    setSlug(art.slug);
+    setSlug(art.slug || "");
     setContent(art.content);
-    setCategory(art.category);
-    setStatus(art.status);
+    setCategory(art.category || "ANNOUNCEMENT");
+    setStatus(art.status || "Published");
     setImageUrl(art.imageUrl || "");
     setActiveTab("add");
   };
 
-  // Delete Action
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this article?")) {
       const filtered = articles.filter((a) => a.id !== id);
       setArticles(filtered);
-      localStorage.setItem("cw_news_articles", JSON.stringify(filtered));
+      saveAllNews(filtered);
     }
   };
 
@@ -151,7 +140,7 @@ export default function NewsPanel() {
     setTitle("");
     setSlug("");
     setContent("");
-    setCategory("Announcement");
+    setCategory("ANNOUNCEMENT");
     setStatus("Published");
     setImageUrl("");
   };
@@ -172,7 +161,7 @@ export default function NewsPanel() {
           </div>
         </div>
 
-        {/* Tab Buttons */}
+        {/* Tab Navigation */}
         <div className="flex gap-2 border-b border-[#23293A] pb-3">
           <button
             onClick={() => {
@@ -199,7 +188,7 @@ export default function NewsPanel() {
           </button>
         </div>
 
-        {/* TAB 1: ADD / EDIT ARTICLE */}
+        {/* TAB 1: ADD / EDIT */}
         {activeTab === "add" && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-[#121624] border border-[#23293A] rounded-xl p-6 shadow-md space-y-4">
@@ -207,7 +196,6 @@ export default function NewsPanel() {
                 {editingId ? "EDIT EXISTING ARTICLE" : "CREATE NEW ARTICLE"}
               </h2>
 
-              {/* Title Input */}
               <div>
                 <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                   Headline / Title
@@ -222,7 +210,6 @@ export default function NewsPanel() {
                 />
               </div>
 
-              {/* Slug Field */}
               <div>
                 <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                   URL Slug
@@ -237,7 +224,6 @@ export default function NewsPanel() {
                 />
               </div>
 
-              {/* Content Textarea */}
               <div>
                 <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                   Article Content
@@ -253,39 +239,36 @@ export default function NewsPanel() {
               </div>
             </div>
 
-            {/* PUBLISH SETTINGS Panel */}
             <div className="bg-[#121624] border border-[#23293A] rounded-xl p-6 shadow-md space-y-4">
               <h2 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">
                 PUBLISH SETTINGS
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Category Dropdown */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                     Category
                   </label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-lg text-white outline-none focus:border-[#D4AF37]"
                   >
-                    <option value="Announcement">Announcement</option>
-                    <option value="Match Report">Match Report</option>
-                    <option value="Top Performer">Top Performer</option>
-                    <option value="Tournament Update">Tournament Update</option>
-                    <option value="Transfer">Transfer</option>
+                    <option value="ANNOUNCEMENT">Announcement</option>
+                    <option value="MATCH REPORT">Match Report</option>
+                    <option value="TOP PERFORMER">Top Performer</option>
+                    <option value="TOURNAMENT UPDATE">Tournament Update</option>
+                    <option value="TRANSFER">Transfer</option>
                   </select>
                 </div>
 
-                {/* Status Dropdown */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                     Status
                   </label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={(e) => setStatus(e.target.value)}
                     className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-lg text-white outline-none focus:border-[#D4AF37]"
                   >
                     <option value="Published">Published</option>
@@ -294,7 +277,6 @@ export default function NewsPanel() {
                 </div>
               </div>
 
-              {/* Featured Image Input */}
               <div>
                 <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
                   Featured Image
@@ -312,7 +294,6 @@ export default function NewsPanel() {
                 )}
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-lg hover:brightness-110 transition-all uppercase cursor-pointer"
@@ -323,7 +304,7 @@ export default function NewsPanel() {
           </form>
         )}
 
-        {/* TAB 2: MANAGE ARTICLES TABLE */}
+        {/* TAB 2: MANAGE */}
         {activeTab === "manage" && (
           <div className="bg-[#121624] border border-[#23293A] rounded-xl p-4 md:p-6 shadow-md overflow-x-auto">
             <h2 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest mb-4">
@@ -351,26 +332,26 @@ export default function NewsPanel() {
                       <td className="py-3 px-2 font-mono text-gray-500 text-[10px]">{art.id.slice(0, 8)}</td>
                       <td className="py-3 px-2 max-w-[200px]">
                         <p className="font-bold text-white truncate">{art.title}</p>
-                        <p className="text-[10px] font-mono text-[#D4AF37] truncate">{art.slug}</p>
+                        <p className="text-[10px] font-mono text-[#D4AF37] truncate">{art.slug || art.id}</p>
                       </td>
                       <td className="py-3 px-2">
-                        <span className="bg-[#0B0E14] border border-[#23293A] text-[#D4AF37] px-2 py-0.5 rounded text-[10px] font-bold">
-                          {art.category}
+                        <span className="bg-[#0B0E14] border border-[#23293A] text-[#D4AF37] px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+                          {art.category || "ANNOUNCEMENT"}
                         </span>
                       </td>
-                      <td className="py-3 px-2 font-bold text-gray-300">{art.author}</td>
+                      <td className="py-3 px-2 font-bold text-gray-300">{art.author || "ADMIN"}</td>
                       <td className="py-3 px-2">
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            art.status === "Published"
-                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                            art.status === "Draft"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
                           }`}
                         >
-                          {art.status}
+                          {art.status || "Published"}
                         </span>
                       </td>
-                      <td className="py-3 px-2 text-[10px] text-gray-400">{art.createdAt}</td>
+                      <td className="py-3 px-2 text-[10px] text-gray-400">{art.date || art.createdAt}</td>
                       <td className="py-3 px-2 text-right space-x-2">
                         <button
                           onClick={() => handleEdit(art)}

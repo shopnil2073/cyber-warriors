@@ -21,13 +21,22 @@ export interface Standing {
   pts: number;
 }
 
-export interface NewsArticle {
+export interface NewsItem {
   id: string;
   title: string;
-  date: string;
+  slug?: string;
   category: string;
   content: string;
+  date: string;
+  author?: string;
+  imageUrl?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+// Legacy alias to support existing imports
+export type NewsArticle = NewsItem;
 
 const DEFAULT_FIXTURES: Fixture[] = [
   {
@@ -49,16 +58,6 @@ const DEFAULT_STANDINGS: Standing[] = [
   { rank: 1, name: "Md mahi", mp: 9, w: 8, gd: 15, pts: 25 },
   { rank: 2, name: "Raiyan Anwar", mp: 10, w: 7, gd: 19, pts: 23 },
   { rank: 3, name: "Sezan Mahfuj", mp: 10, w: 7, gd: 18, pts: 23 },
-];
-
-const DEFAULT_NEWS: NewsArticle[] = [
-  {
-    id: "n1",
-    title: "PFG Season 2 Grand Finals Announced!",
-    date: "15 SEP 2026",
-    category: "ANNOUNCEMENT",
-    content: "Get ready for the biggest showdown of Cyber Warriors Season 2.",
-  },
 ];
 
 // Fixtures Store
@@ -97,17 +96,29 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// News Store
-export const getStoredNews = (): NewsArticle[] => {
-  if (typeof window === "undefined") return DEFAULT_NEWS;
-  const saved = localStorage.getItem("cw_news");
-  return saved ? JSON.parse(saved) : DEFAULT_NEWS;
+// News Store (Cleaned demo news & unified cw_news key)
+export const getStoredNews = (): NewsItem[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem("cw_news");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Error reading news", e);
+  }
+  return [];
 };
 
-export const saveNews = (article: NewsArticle) => {
+export const saveNews = (article: NewsItem) => {
   const current = getStoredNews();
   const updated = [article, ...current];
   localStorage.setItem("cw_news", JSON.stringify(updated));
+};
+
+export const saveAllNews = (newsArray: NewsItem[]) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("cw_news", JSON.stringify(newsArray));
 };
 
 // Ticker Store

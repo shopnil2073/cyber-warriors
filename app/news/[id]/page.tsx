@@ -1,97 +1,111 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { getStoredNews, NewsItem } from "../../utils/tournamentStore";
 
-export async function generateStaticParams() {
-  return [
-    { id: "trc-training-drill" },
-    { id: "trc-match-rules" },
-    { id: "academy-welcomes-five" },
-    { id: "anupam-satter-turzo" },
-    { id: "strengthens-main-roster" },
-    { id: "ucl-season-2-final-clash" },
-  ];
-}
+export default function ArticleDetailsPage() {
+  const params = useParams();
+  const [article, setArticle] = useState<NewsItem | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function SingleNewsPage(props: { params: any }) {
-  const { id } = await props.params;
+  useEffect(() => {
+    const newsId = params?.id as string;
+    if (newsId) {
+      const allNews = getStoredNews();
+      // ID অথবা Slug যেকোনো একটির সাথে ম্যাচ করা
+      const found = allNews.find(
+        (item) => item.id === newsId || item.slug === newsId
+      );
+      setArticle(found || null);
+    }
+    setLoading(false);
+  }, [params]);
 
-  const messiPic =
-    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1000&auto=format&fit=crop";
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-main)] text-white flex items-center justify-center p-4">
+        <p className="text-xs font-mono text-[#D4AF37] animate-pulse">
+          LOADING ARTICLE DETAILS...
+        </p>
+      </div>
+    );
+  }
+
+  if (!article) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-main)] text-white flex flex-col items-center justify-center p-4 space-y-4">
+        <div className="text-4xl">📰</div>
+        <h1 className="text-base font-black text-[#D4AF37] uppercase tracking-wider">
+          ARTICLE NOT FOUND
+        </h1>
+        <p className="text-xs text-[var(--text-muted)] italic">
+          Requested news article does not exist or has been removed.
+        </p>
+        <Link
+          href="/news"
+          className="bg-[#D4AF37] text-black font-extrabold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all uppercase"
+        >
+          ‹ BACK TO ALL NEWS
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 transition-colors duration-300 pb-20">
-      <div className="max-w-4xl mx-auto bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 md:p-10 shadow-2xl">
-        <div className="inline-block bg-[var(--bg-main)] border border-[#D4AF37]/40 text-[#D4AF37] text-[10px] font-black px-3 py-1 rounded uppercase tracking-widest mb-4">
-          TOURNAMENT UPDATE
-        </div>
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
+      <div className="max-w-3xl mx-auto space-y-6">
+        
+        {/* Navigation Back Button */}
+        <Link
+          href="/news"
+          className="inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] hover:underline uppercase"
+        >
+          ‹ BACK TO NEWS & ANNOUNCEMENTS
+        </Link>
 
-        <h1 className="text-2xl md:text-4xl font-black text-[var(--text-main)] tracking-tight uppercase leading-tight mb-4">
-          TRC TRAINING DRILL ( ACADEMY )
-        </h1>
-
-        <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-muted)] border-b border-[var(--border-color)] pb-6 mb-8">
-          <span>By <strong className="text-[#D4AF37]">ADEEB KHANDAKER</strong></span>
-          <span>•</span>
-          <span>7:09 PM • AUG 17, 2026 (BST)</span>
-          <span>•</span>
-          <span>👁️ 84 Views</span>
-        </div>
-
-        <div className="relative h-64 md:h-96 w-full rounded-xl overflow-hidden mb-8 border border-[var(--border-color)]">
-          <img
-            src={messiPic}
-            alt="News Cover"
-            className="w-full h-full object-cover"
-          />
-        </div>
-
-        <div className="space-y-4 text-xs md:text-sm leading-relaxed text-[var(--text-muted)] border-b border-[var(--border-color)] pb-8">
-          <p>
-            এই ট্রেইনিং ড্রিলে মোট ১০ জন সদস্য অংশগ্রহণ করবে। এই ড্রিলের পারফরম্যান্সের ওপর ট্রিপেল ড্রিলের পারফরম্যান্স মূল্যায়ন করা হবে।
-          </p>
-          <p>
-            এই ড্রিলে অংশগ্রহণ বাধ্যতামূলক। সময়মতো যুক্ত হতে ব্যর্থ হলে দল থেকে সাময়িকভাবে বরখাস্ত করা হতে পারে।
-          </p>
-          <p>
-            এই ড্রিলের সকল ম্যাচ COBEG-এর নিয়ম ও বিধিমালা অনুসরণ করে পরিচালিত হবে।
-          </p>
-        </div>
-
-        <div className="py-6 border-b border-[var(--border-color)] flex flex-wrap justify-between items-center gap-4">
-          <span className="text-xs font-black text-[#D4AF37] uppercase tracking-wider">
-            SHARE THIS ARTICLE
-          </span>
-          <div className="flex items-center gap-2 text-xs">
-            <button className="px-3 py-1.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded text-[var(--text-main)] font-bold hover:border-[#D4AF37]">
-              f
-            </button>
-            <button className="px-3 py-1.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded text-[var(--text-main)] font-bold hover:border-[#D4AF37]">
-              𝕏
-            </button>
-            <button className="px-3 py-1.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded text-[var(--text-main)] font-bold hover:border-[#D4AF37]">
-              💬
-            </button>
+        {/* Main Article Card */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 md:p-8 space-y-6 shadow-xl">
+          
+          {/* Category & Date Header */}
+          <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b border-[var(--border-color)]">
+            <span className="text-[10px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-3 py-1 rounded-full border border-[#D4AF37]/30 uppercase tracking-widest">
+              {article.category || "ANNOUNCEMENT"}
+            </span>
+            <span className="text-xs font-mono text-[var(--text-muted)]">
+              📅 {article.date || article.createdAt}
+            </span>
           </div>
+
+          {/* Title */}
+          <h1 className="text-xl md:text-3xl font-black text-white uppercase tracking-wider leading-snug">
+            {article.title}
+          </h1>
+
+          {/* Author */}
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] font-bold">
+            <span>BY {article.author || "CYBER WARRIORS ADMIN"}</span>
+          </div>
+
+          {/* Image */}
+          {article.imageUrl && (
+            <div className="rounded-xl overflow-hidden border border-[var(--border-color)] max-h-96">
+              <img
+                src={article.imageUrl}
+                alt={article.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          {/* Content */}
+          <div className="text-xs md:text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-normal space-y-4 pt-2">
+            {article.content}
+          </div>
+
         </div>
 
-        <div className="mt-10">
-          <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-wider mb-6">
-            MORE FROM CYBER WARRIORS
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link href="/news" className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl p-4 hover:border-[#D4AF37] transition-all">
-              <span className="text-[9px] text-[#D4AF37] font-bold">AUG 17, 2026</span>
-              <h4 className="font-bold text-xs text-[var(--text-main)] mt-1 line-clamp-1 uppercase">
-                TRC MATCH RULES & REGULATIONS
-              </h4>
-            </Link>
-            <Link href="/news" className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl p-4 hover:border-[#D4AF37] transition-all">
-              <span className="text-[9px] text-[#D4AF37] font-bold">AUG 02, 2026</span>
-              <h4 className="font-bold text-xs text-[var(--text-main)] mt-1 line-clamp-1 uppercase">
-                Academy Welcomes Five New Players to Roster
-              </h4>
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );
