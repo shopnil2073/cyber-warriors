@@ -9,7 +9,6 @@ export default function NewsPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadNewsData = async () => {
-    // Local read
     const localNews = getStoredNews();
     const publishedLocal = localNews.filter((item) => !item.status || item.status === "Published");
     if (publishedLocal.length > 0) {
@@ -17,7 +16,6 @@ export default function NewsPage() {
       setLoading(false);
     }
 
-    // Global Cloud sync
     const cloudNews = await fetchNewsFromCloud();
     const publishedCloud = cloudNews.filter((item) => !item.status || item.status === "Published");
     setNewsList(publishedCloud);
@@ -90,7 +88,7 @@ export default function NewsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
                 const cleanSlug = item.slug || item.id;
-                const targetUrl = `/news/${cleanSlug}`;
+                const targetUrl = `/news-detail?slug=${cleanSlug}`;
 
                 return (
                   <div
