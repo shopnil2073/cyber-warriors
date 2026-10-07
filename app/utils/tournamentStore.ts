@@ -60,6 +60,20 @@ const DEFAULT_STANDINGS: Standing[] = [
   { rank: 3, name: "Sezan Mahfuj", mp: 10, w: 7, gd: 18, pts: 23 },
 ];
 
+// Fallback Default News for public visitors
+const DEFAULT_NEWS: NewsItem[] = [
+  {
+    id: "n_default_1",
+    title: "SIAM IS THE BEST PLAYER IN CW",
+    slug: "siam-is-the-best-player-in-cw",
+    category: "TOP PERFORMER",
+    content: "When it comes to high-stakes esports and dominant efootball gameplay, one name stands out above the rest in Cyber Warriors: Siam. Known for his incredible vision, razor-sharp tactical intelligence, and cool composure.",
+    date: "OCT 07, 2026",
+    author: "SIAM HOSSAIN",
+    status: "Published",
+  },
+];
+
 // Fixtures Store
 export const getStoredFixtures = (): Fixture[] => {
   if (typeof window === "undefined") return DEFAULT_FIXTURES;
@@ -96,21 +110,25 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// News Store (Cleaned demo news & unified cw_news key)
+// News Store (Returns DEFAULT_NEWS if empty so public visitors see news)
 export const getStoredNews = (): NewsItem[] => {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return DEFAULT_NEWS;
   try {
     const saved = localStorage.getItem("cw_news");
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.error("Error reading news", e);
   }
-  return [];
+  return DEFAULT_NEWS;
 };
 
 export const saveNews = (article: NewsItem) => {
+  if (typeof window === "undefined") return;
   const current = getStoredNews();
   const updated = [article, ...current];
   localStorage.setItem("cw_news", JSON.stringify(updated));
