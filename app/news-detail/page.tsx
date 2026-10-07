@@ -112,7 +112,7 @@ function ArticleContent() {
 
 export default function NewsDetailPage() {
   return (
-    <Suspense fallback={<div className="text-white text-center p-10">Loading...</div>}>
+    <Suspense fallback={<div className="text-white text-center p-10 font-mono text-xs">Loading Notice...</div>}>
       <ArticleContent />
     </Suspense>
   );
