@@ -95,9 +95,9 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// --- GLOBAL CLOUD NEWS STORE (JSONBin) ---
-const JSONBIN_BIN_ID = "66fbe5d8e41b4d34e4399c5a"; // Shared Global Storage Bin
-const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+// --- GLOBAL FREE CLOUD STORE ---
+const PUBLIC_DB_URL = "https://api.jsonbin.io/v3/b/66fbe5d8e41b4d34e4399c5a";
+const MASTER_KEY = "$2a$10$y6y.sD5I1O3vL/jV0K2bneQpM4i1d8t2T0wM3p6X3P8hR7L5q8L2u"; // Public Master Sync Key
 
 export const getStoredNews = (): NewsItem[] => {
   if (typeof window === "undefined") return [];
@@ -109,11 +109,14 @@ export const getStoredNews = (): NewsItem[] => {
   }
 };
 
-// Cloud Sync Get Function (Async)
+// Cloud Fetch (Read Publicly)
 export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
   try {
-    const res = await fetch(`${JSONBIN_URL}/latest`, {
-      headers: { "X-Bin-Meta": "false" },
+    const res = await fetch(`${PUBLIC_DB_URL}/latest`, {
+      headers: {
+        "X-Master-Key": MASTER_KEY,
+        "X-Bin-Meta": "false",
+      },
       cache: "no-store",
     });
     if (res.ok) {
@@ -126,31 +129,32 @@ export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
       }
     }
   } catch (e) {
-    console.error("Cloud fetch failed, fallback to local", e);
+    console.error("Cloud fetch failed", e);
   }
   return getStoredNews();
 };
 
-// Cloud Sync Save Function
+// Cloud Save (Save Publicly)
 export const saveAllNews = async (newsArray: NewsItem[]) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_news", JSON.stringify(newsArray));
   }
   try {
-    await fetch(JSONBIN_URL, {
+    await fetch(PUBLIC_DB_URL, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "X-Master-Key": MASTER_KEY,
       },
       body: JSON.stringify(newsArray),
     });
   } catch (e) {
-    console.error("Failed to sync news with cloud", e);
+    console.error("Cloud save failed", e);
   }
 };
 
 export const saveNews = async (article: NewsItem) => {
-  const current = getStoredNews();
+  const current = await fetchNewsFromCloud();
   const updated = [article, ...current];
   await saveAllNews(updated);
 };
