@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { getStoredNews, NewsItem } from "../utils/tournamentStore";
 
 export default function NewsPage() {
@@ -9,7 +10,6 @@ export default function NewsPage() {
 
   const loadNewsData = () => {
     const allNews = getStoredNews();
-    // Filter published articles
     const publishedOnly = allNews.filter((item) => !item.status || item.status === "Published");
     setNewsList(publishedOnly);
   };
@@ -27,7 +27,6 @@ export default function NewsPage() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Filter based on selected tab
   const filteredNews =
     selectedCategory === "ALL"
       ? newsList
@@ -80,7 +79,7 @@ export default function NewsPage() {
 
         {/* FEATURED ARTICLE (Top Banner) */}
         {featuredArticle && selectedCategory === "ALL" && (
-          <div className="bg-[var(--bg-card)] border border-[#D4AF37]/50 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3">
+          <div className="bg-[var(--bg-card)] border border-[#D4AF37]/50 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3 hover:border-[#D4AF37] transition-all">
             <div className="flex justify-between items-center">
               <span className="bg-[#D4AF37] text-black text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block">
                 ⚡ FEATURED ARTICLE
@@ -91,24 +90,34 @@ export default function NewsPage() {
             </div>
 
             {featuredArticle.imageUrl && (
-              <img
-                src={featuredArticle.imageUrl}
-                alt={featuredArticle.title}
-                className="w-full h-48 md:h-64 object-cover rounded-xl border border-[var(--border-color)]"
-              />
+              <Link href={`/news/${featuredArticle.slug || featuredArticle.id}`} target="_blank">
+                <img
+                  src={featuredArticle.imageUrl}
+                  alt={featuredArticle.title}
+                  className="w-full h-48 md:h-64 object-cover rounded-xl border border-[var(--border-color)] hover:opacity-90 transition-all cursor-pointer"
+                />
+              </Link>
             )}
 
-            <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-wider">
-              {featuredArticle.title}
-            </h2>
+            <Link href={`/news/${featuredArticle.slug || featuredArticle.id}`} target="_blank">
+              <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-wider hover:text-[#D4AF37] transition-all cursor-pointer">
+                {featuredArticle.title}
+              </h2>
+            </Link>
 
             <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-3">
               {featuredArticle.content}
             </p>
 
-            <div className="pt-2 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[#D4AF37]">
+            <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[#D4AF37]">
               <span>CATEGORY: {(featuredArticle.category || "ANNOUNCEMENT").toUpperCase()}</span>
-              <span>AUTHOR: {featuredArticle.author || "ADMIN"}</span>
+              <Link
+                href={`/news/${featuredArticle.slug || featuredArticle.id}`}
+                target="_blank"
+                className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-3 py-1 rounded-lg hover:bg-[#D4AF37] hover:text-black transition-all font-black"
+              >
+                READ FULL NOTICE ›
+              </Link>
             </div>
           </div>
         )}
@@ -121,45 +130,57 @@ export default function NewsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredNews.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[#D4AF37]/40 rounded-xl p-4 space-y-3 transition-all flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    {item.imageUrl && (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-36 object-cover rounded-lg border border-[var(--border-color)]"
-                      />
-                    )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-2.5 py-1 rounded border border-[#D4AF37]/30 uppercase">
-                        {item.category || "ANNOUNCEMENT"}
-                      </span>
-                      <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                        📅 {item.date || item.createdAt}
-                      </span>
+              {filteredNews.map((item) => {
+                const targetUrl = `/news/${item.slug || item.id}`;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[#D4AF37]/50 rounded-xl p-4 space-y-3 transition-all flex flex-col justify-between group shadow-md"
+                  >
+                    <div className="space-y-2">
+                      {item.imageUrl && (
+                        <Link href={targetUrl} target="_blank">
+                          <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            className="w-full h-36 object-cover rounded-lg border border-[var(--border-color)] group-hover:scale-[1.01] transition-all cursor-pointer"
+                          />
+                        </Link>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-2.5 py-1 rounded border border-[#D4AF37]/30 uppercase">
+                          {item.category || "ANNOUNCEMENT"}
+                        </span>
+                        <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                          📅 {item.date || item.createdAt}
+                        </span>
+                      </div>
+
+                      <Link href={targetUrl} target="_blank">
+                        <h3 className="text-sm font-extrabold text-white uppercase line-clamp-2 group-hover:text-[#D4AF37] transition-all cursor-pointer">
+                          {item.title}
+                        </h3>
+                      </Link>
+
+                      <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                        {item.content}
+                      </p>
                     </div>
 
-                    <h3 className="text-sm font-extrabold text-white uppercase line-clamp-2">
-                      {item.title}
-                    </h3>
-
-                    <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
-                      {item.content}
-                    </p>
+                    <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] text-[var(--text-muted)] font-bold">
+                      <span>By {item.author || "ADMIN"}</span>
+                      <Link
+                        href={targetUrl}
+                        target="_blank"
+                        className="text-[#D4AF37] hover:underline font-black cursor-pointer"
+                      >
+                        READ FULL NOTICE ›
+                      </Link>
+                    </div>
                   </div>
-
-                  <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] text-[var(--text-muted)] font-bold">
-                    <span>By {item.author || "ADMIN"}</span>
-                    <span className="text-[#D4AF37]">
-                      READ FULL NOTICE ›
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
