@@ -1,16 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getStoredNews, NewsItem } from "../utils/tournamentStore";
+import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../utils/tournamentStore";
 
 export default function NewsPage() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const loadNewsData = () => {
-    const allNews = getStoredNews();
-    const publishedOnly = allNews.filter((item) => !item.status || item.status === "Published");
-    setNewsList(publishedOnly);
+  const loadNewsData = async () => {
+    // First load local instantly
+    const localNews = getStoredNews();
+    const publishedLocal = localNews.filter((item) => !item.status || item.status === "Published");
+    setNewsList(publishedLocal);
+
+    // Fetch live from cloud
+    const cloudNews = await fetchNewsFromCloud();
+    const publishedCloud = cloudNews.filter((item) => !item.status || item.status === "Published");
+    setNewsList(publishedCloud);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -18,7 +26,8 @@ export default function NewsPage() {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "cw_news") {
-        loadNewsData();
+        const updated = getStoredNews().filter((item) => !item.status || item.status === "Published");
+        setNewsList(updated);
       }
     };
 
@@ -76,7 +85,11 @@ export default function NewsPage() {
 
         {/* ALL ARTICLES LIST */}
         <div className="space-y-4">
-          {filteredNews.length === 0 ? (
+          {loading && newsList.length === 0 ? (
+            <div className="text-center py-10 text-xs font-mono text-[#D4AF37] animate-pulse">
+              LOADING LATEST NEWS FROM SERVER...
+            </div>
+          ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
               এই ক্যাটাগরিতে এখনো কোনো খবর প্রকাশিত হয়নি।
             </div>

@@ -35,7 +35,6 @@ export interface NewsItem {
   updatedAt?: string;
 }
 
-// Legacy alias to support existing imports
 export type NewsArticle = NewsItem;
 
 const DEFAULT_FIXTURES: Fixture[] = [
@@ -58,20 +57,6 @@ const DEFAULT_STANDINGS: Standing[] = [
   { rank: 1, name: "Md mahi", mp: 9, w: 8, gd: 15, pts: 25 },
   { rank: 2, name: "Raiyan Anwar", mp: 10, w: 7, gd: 19, pts: 23 },
   { rank: 3, name: "Sezan Mahfuj", mp: 10, w: 7, gd: 18, pts: 23 },
-];
-
-// Fallback Default News for public visitors
-const DEFAULT_NEWS: NewsItem[] = [
-  {
-    id: "n_default_1",
-    title: "SIAM IS THE BEST PLAYER IN CW",
-    slug: "siam-is-the-best-player-in-cw",
-    category: "TOP PERFORMER",
-    content: "When it comes to high-stakes esports and dominant efootball gameplay, one name stands out above the rest in Cyber Warriors: Siam. Known for his incredible vision, razor-sharp tactical intelligence, and cool composure.",
-    date: "OCT 07, 2026",
-    author: "SIAM HOSSAIN",
-    status: "Published",
-  },
 ];
 
 // Fixtures Store
@@ -110,33 +95,64 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// News Store (Returns DEFAULT_NEWS if empty so public visitors see news)
+// --- GLOBAL CLOUD NEWS STORE (JSONBin) ---
+const JSONBIN_BIN_ID = "66fbe5d8e41b4d34e4399c5a"; // Shared Global Storage Bin
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
 export const getStoredNews = (): NewsItem[] => {
-  if (typeof window === "undefined") return DEFAULT_NEWS;
+  if (typeof window === "undefined") return [];
   try {
     const saved = localStorage.getItem("cw_news");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Cloud Sync Get Function (Async)
+export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
+  try {
+    const res = await fetch(`${JSONBIN_URL}/latest`, {
+      headers: { "X-Bin-Meta": "false" },
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("cw_news", JSON.stringify(data));
+        }
+        return data;
       }
     }
   } catch (e) {
-    console.error("Error reading news", e);
+    console.error("Cloud fetch failed, fallback to local", e);
   }
-  return DEFAULT_NEWS;
+  return getStoredNews();
 };
 
-export const saveNews = (article: NewsItem) => {
-  if (typeof window === "undefined") return;
+// Cloud Sync Save Function
+export const saveAllNews = async (newsArray: NewsItem[]) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("cw_news", JSON.stringify(newsArray));
+  }
+  try {
+    await fetch(JSONBIN_URL, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newsArray),
+    });
+  } catch (e) {
+    console.error("Failed to sync news with cloud", e);
+  }
+};
+
+export const saveNews = async (article: NewsItem) => {
   const current = getStoredNews();
   const updated = [article, ...current];
-  localStorage.setItem("cw_news", JSON.stringify(updated));
-};
-
-export const saveAllNews = (newsArray: NewsItem[]) => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("cw_news", JSON.stringify(newsArray));
+  await saveAllNews(updated);
 };
 
 // Ticker Store
