@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { getActiveUser } from "../utils/userStore";
-import { getStoredNews, saveAllNews, NewsItem } from "../utils/tournamentStore";
+import { getStoredNews, saveAllNews, fetchNewsFromCloud, NewsItem } from "../utils/tournamentStore";
 
 export default function NewsPanel() {
   const [activeTab, setActiveTab] = useState<"add" | "manage">("add");
   const [articles, setArticles] = useState<NewsItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   // Form States
   const [title, setTitle] = useState("");
@@ -18,8 +19,8 @@ export default function NewsPanel() {
   const [imageUrl, setImageUrl] = useState("");
   const [authorName, setAuthorName] = useState("CYBER WARRIORS ADMIN");
 
-  const loadArticles = () => {
-    const data = getStoredNews();
+  const loadArticles = async () => {
+    const data = await fetchNewsFromCloud();
     setArticles(data);
   };
 
@@ -30,15 +31,6 @@ export default function NewsPanel() {
     }
 
     loadArticles();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "cw_news") {
-        loadArticles();
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const handleTitleChange = (val: string) => {
@@ -64,9 +56,11 @@ export default function NewsPanel() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !content) return alert("Please fill in Title and Content!");
+
+    setSaving(true);
 
     const formattedDate = new Date().toLocaleDateString("en-US", {
       day: "2-digit",
@@ -91,7 +85,6 @@ export default function NewsPanel() {
             }
           : art
       );
-      alert("Article Updated Successfully!");
     } else {
       const newArticle: NewsItem = {
         id: "n_" + Date.now(),
@@ -107,11 +100,14 @@ export default function NewsPanel() {
         updatedAt: formattedDate,
       };
       updatedList = [newArticle, ...articles];
-      alert("Article Published Successfully!");
     }
 
+    // Save locally and sync to global Cloud DB
     setArticles(updatedList);
-    saveAllNews(updatedList);
+    await saveAllNews(updatedList);
+
+    setSaving(false);
+    alert(editingId ? "Article Updated & Published Globally!" : "Article Published Globally!");
     resetForm();
     setActiveTab("manage");
   };
@@ -127,11 +123,14 @@ export default function NewsPanel() {
     setActiveTab("add");
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this article?")) {
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this article globally?")) {
+      setSaving(true);
       const filtered = articles.filter((a) => a.id !== id);
       setArticles(filtered);
-      saveAllNews(filtered);
+      await saveAllNews(filtered);
+      setSaving(false);
+      alert("Article deleted globally!");
     }
   };
 
@@ -296,9 +295,10 @@ export default function NewsPanel() {
 
               <button
                 type="submit"
-                className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-lg hover:brightness-110 transition-all uppercase cursor-pointer"
+                disabled={saving}
+                className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-lg hover:brightness-110 transition-all uppercase cursor-pointer disabled:opacity-50"
               >
-                🚀 {editingId ? "UPDATE ARTICLE" : "PUBLISH ARTICLE"}
+                {saving ? "SYNCING TO GLOBAL CLOUD..." : editingId ? "🚀 UPDATE & PUBLISH GLOBALLY" : "🚀 PUBLISH TO ALL VISITORS"}
               </button>
             </div>
           </form>
@@ -312,7 +312,7 @@ export default function NewsPanel() {
             </h2>
 
             {articles.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No news articles found. Create one from the Add Article tab.</p>
+              <p className="text-xs text-gray-400 italic">No news articles found in cloud DB. Create one from the Add Article tab.</p>
             ) : (
               <table className="w-full text-left text-xs border-collapse min-w-[700px]">
                 <thead>

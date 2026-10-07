@@ -9,12 +9,15 @@ export default function NewsPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadNewsData = async () => {
-    // First load local instantly
+    // 1. Instant local read
     const localNews = getStoredNews();
     const publishedLocal = localNews.filter((item) => !item.status || item.status === "Published");
-    setNewsList(publishedLocal);
+    if (publishedLocal.length > 0) {
+      setNewsList(publishedLocal);
+      setLoading(false);
+    }
 
-    // Fetch live from cloud
+    // 2. Fetch live data from global cloud DB
     const cloudNews = await fetchNewsFromCloud();
     const publishedCloud = cloudNews.filter((item) => !item.status || item.status === "Published");
     setNewsList(publishedCloud);
@@ -23,16 +26,6 @@ export default function NewsPage() {
 
   useEffect(() => {
     loadNewsData();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "cw_news") {
-        const updated = getStoredNews().filter((item) => !item.status || item.status === "Published");
-        setNewsList(updated);
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const filteredNews =
@@ -86,8 +79,8 @@ export default function NewsPage() {
         {/* ALL ARTICLES LIST */}
         <div className="space-y-4">
           {loading && newsList.length === 0 ? (
-            <div className="text-center py-10 text-xs font-mono text-[#D4AF37] animate-pulse">
-              LOADING LATEST NEWS FROM SERVER...
+            <div className="text-center py-12 text-xs font-mono text-[#D4AF37] animate-pulse">
+              LOADING LATEST NEWS FROM GLOBAL SERVER...
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
