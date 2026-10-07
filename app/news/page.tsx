@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { getStoredNews, NewsItem } from "../utils/tournamentStore";
 
 export default function NewsPage() {
@@ -33,8 +32,6 @@ export default function NewsPage() {
       : newsList.filter(
           (item) => (item.category || "").toUpperCase().trim() === selectedCategory.toUpperCase().trim()
         );
-
-  const featuredArticle = newsList.length > 0 ? newsList[0] : null;
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
@@ -77,51 +74,6 @@ export default function NewsPage() {
           ))}
         </div>
 
-        {/* FEATURED ARTICLE (Top Banner) */}
-        {featuredArticle && selectedCategory === "ALL" && (
-          <div className="bg-[var(--bg-card)] border border-[#D4AF37]/50 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3 hover:border-[#D4AF37] transition-all">
-            <div className="flex justify-between items-center">
-              <span className="bg-[#D4AF37] text-black text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block">
-                ⚡ FEATURED ARTICLE
-              </span>
-              <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                📅 {featuredArticle.date || featuredArticle.createdAt}
-              </span>
-            </div>
-
-            {featuredArticle.imageUrl && (
-              <Link href={`/news/${featuredArticle.slug || featuredArticle.id}`} target="_blank">
-                <img
-                  src={featuredArticle.imageUrl}
-                  alt={featuredArticle.title}
-                  className="w-full h-48 md:h-64 object-cover rounded-xl border border-[var(--border-color)] hover:opacity-90 transition-all cursor-pointer"
-                />
-              </Link>
-            )}
-
-            <Link href={`/news/${featuredArticle.slug || featuredArticle.id}`} target="_blank">
-              <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-wider hover:text-[#D4AF37] transition-all cursor-pointer">
-                {featuredArticle.title}
-              </h2>
-            </Link>
-
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-3">
-              {featuredArticle.content}
-            </p>
-
-            <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[#D4AF37]">
-              <span>CATEGORY: {(featuredArticle.category || "ANNOUNCEMENT").toUpperCase()}</span>
-              <Link
-                href={`/news/${featuredArticle.slug || featuredArticle.id}`}
-                target="_blank"
-                className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] px-3 py-1 rounded-lg hover:bg-[#D4AF37] hover:text-black transition-all font-black"
-              >
-                READ FULL NOTICE ›
-              </Link>
-            </div>
-          </div>
-        )}
-
         {/* ALL ARTICLES LIST */}
         <div className="space-y-4">
           {filteredNews.length === 0 ? (
@@ -131,7 +83,7 @@ export default function NewsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
-                const targetUrl = `/news/${item.slug || item.id}`;
+                const targetUrl = `/news-detail?id=${item.id}`;
 
                 return (
                   <div
@@ -140,13 +92,13 @@ export default function NewsPage() {
                   >
                     <div className="space-y-2">
                       {item.imageUrl && (
-                        <Link href={targetUrl} target="_blank">
+                        <a href={targetUrl} target="_blank" rel="noopener noreferrer">
                           <img
                             src={item.imageUrl}
                             alt={item.title}
                             className="w-full h-36 object-cover rounded-lg border border-[var(--border-color)] group-hover:scale-[1.01] transition-all cursor-pointer"
                           />
-                        </Link>
+                        </a>
                       )}
                       <div className="flex justify-between items-center">
                         <span className="text-[9px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-2.5 py-1 rounded border border-[#D4AF37]/30 uppercase">
@@ -157,11 +109,11 @@ export default function NewsPage() {
                         </span>
                       </div>
 
-                      <Link href={targetUrl} target="_blank">
+                      <a href={targetUrl} target="_blank" rel="noopener noreferrer">
                         <h3 className="text-sm font-extrabold text-white uppercase line-clamp-2 group-hover:text-[#D4AF37] transition-all cursor-pointer">
                           {item.title}
                         </h3>
-                      </Link>
+                      </a>
 
                       <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
                         {item.content}
@@ -170,13 +122,14 @@ export default function NewsPage() {
 
                     <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] text-[var(--text-muted)] font-bold">
                       <span>By {item.author || "ADMIN"}</span>
-                      <Link
+                      <a
                         href={targetUrl}
                         target="_blank"
+                        rel="noopener noreferrer"
                         className="text-[#D4AF37] hover:underline font-black cursor-pointer"
                       >
                         READ FULL NOTICE ›
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 );

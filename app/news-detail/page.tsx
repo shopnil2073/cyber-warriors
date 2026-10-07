@@ -1,27 +1,26 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { getStoredNews, NewsItem } from "../../utils/tournamentStore";
+import { useSearchParams } from "next/navigation";
+import { getStoredNews, NewsItem } from "../utils/tournamentStore";
 
-export default function ArticleClient() {
-  const params = useParams();
+function ArticleContent() {
+  const searchParams = useSearchParams();
+  const newsId = searchParams.get("id");
   const [article, setArticle] = useState<NewsItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const newsId = params?.id as string;
     if (newsId) {
       const allNews = getStoredNews();
-      // ID বা Slug যেকোনো একটির সাথে ম্যাচ করা
       const found = allNews.find(
         (item) => item.id === newsId || item.slug === newsId
       );
       setArticle(found || null);
     }
     setLoading(false);
-  }, [params]);
+  }, [newsId]);
 
   if (loading) {
     return (
@@ -108,5 +107,13 @@ export default function ArticleClient() {
 
       </div>
     </div>
+  );
+}
+
+export default function NewsDetailPage() {
+  return (
+    <Suspense fallback={<div className="text-white text-center p-10">Loading...</div>}>
+      <ArticleContent />
+    </Suspense>
   );
 }
