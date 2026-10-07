@@ -93,8 +93,9 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// --- GLOBAL CLOUD STORE ---
-const GLOBAL_CLOUD_URL = "https://api.myjson.online/v1/records/46d6b88e-f1ed-0bc2-bd4d";
+// --- GLOBAL UN-RESTRICTED PUBLIC CLOUD DB ---
+const GLOBAL_CLOUD_URL = "https://api.jsonbin.io/v3/b/66fbe5d8e41b4d34e4399c5a";
+const MASTER_KEY = "$2a$10$y6y.sD5I1O3vL/jV0K2bneQpM4i1d8t2T0wM3p6X3P8hR7L5q8L2u";
 
 export const getStoredNews = (): NewsItem[] => {
   if (typeof window === "undefined") return [];
@@ -108,10 +109,15 @@ export const getStoredNews = (): NewsItem[] => {
 
 export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
   try {
-    const res = await fetch(GLOBAL_CLOUD_URL, { cache: "no-store" });
+    const res = await fetch(`${GLOBAL_CLOUD_URL}/latest`, {
+      headers: {
+        "X-Master-Key": MASTER_KEY,
+        "X-Bin-Meta": "false",
+      },
+      cache: "no-store",
+    });
     if (res.ok) {
-      const result = await res.json();
-      const data = result.data || result;
+      const data = await res.json();
       if (Array.isArray(data)) {
         if (typeof window !== "undefined") {
           localStorage.setItem("cw_news", JSON.stringify(data));
@@ -126,13 +132,17 @@ export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
 };
 
 export const saveAllNews = async (newsArray: NewsItem[]) => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("cw_news", JSON.stringify(newsArray));
+  if (typeof window !== "undefined") {
+    localStorage.setItem("cw_news", JSON.stringify(newsArray));
+  }
   try {
     await fetch(GLOBAL_CLOUD_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: newsArray }),
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": MASTER_KEY,
+      },
+      body: JSON.stringify(newsArray),
     });
   } catch (e) {
     console.error("Cloud save failed", e);

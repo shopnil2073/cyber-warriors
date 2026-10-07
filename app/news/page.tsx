@@ -46,7 +46,7 @@ export default function NewsPage() {
             NEWS & ANNOUNCEMENTS
           </h1>
           <p className="text-xs font-semibold text-[var(--text-muted)]">
-            টুর্নামেন্টের সর্বশেষ আপডেট, ম্যাচ রিপোর্ট, প্লেয়ার ট্রান্সফার ও অফিসিয়াল নোটিশ
+            টুর্নামেন্টের সর্বশেষ আপডেট, ম্যাচ রিপোর্ট, প্লেয়ার ট্রান্সফার ও অফিসিয়াল নোটিশ
           </p>
         </div>
 
@@ -82,13 +82,14 @@ export default function NewsPage() {
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
-              এই ক্যাটাগরিতে এখনো কোনো খবর প্রকাশিত হয়নি।
+              এই ক্যাটাগরিতে এখনো কোনো খবর প্রকাশিত হয়নি।
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
                 const cleanSlug = item.slug || item.id;
-                const targetUrl = `/news-detail?slug=${cleanSlug}`;
+                // Clean link format: https://www.cyber-warriors.xyz/news/slug-name
+                const targetUrl = `/news/${cleanSlug}`;
 
                 return (
                   <div
