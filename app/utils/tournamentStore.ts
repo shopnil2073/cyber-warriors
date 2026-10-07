@@ -59,7 +59,6 @@ const DEFAULT_STANDINGS: Standing[] = [
   { rank: 3, name: "Sezan Mahfuj", mp: 10, w: 7, gd: 18, pts: 23 },
 ];
 
-// Fixtures Store
 export const getStoredFixtures = (): Fixture[] => {
   if (typeof window === "undefined") return DEFAULT_FIXTURES;
   const saved = localStorage.getItem("cw_fixtures");
@@ -78,7 +77,6 @@ export const updateFixtureScore = (id: string, p1Score: number, p2Score: number)
   localStorage.setItem("cw_fixtures", JSON.stringify(updated));
 };
 
-// Standings Store
 export const getStoredStandings = (): Standing[] => {
   if (typeof window === "undefined") return DEFAULT_STANDINGS;
   const saved = localStorage.getItem("cw_standings");
@@ -95,9 +93,8 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// --- GLOBAL FREE CLOUD STORE ---
-const PUBLIC_DB_URL = "https://api.jsonbin.io/v3/b/66fbe5d8e41b4d34e4399c5a";
-const MASTER_KEY = "$2a$10$y6y.sD5I1O3vL/jV0K2bneQpM4i1d8t2T0wM3p6X3P8hR7L5q8L2u"; // Public Master Sync Key
+// --- GLOBAL PUBLIC CLOUD STORE (npoint API) ---
+const CLOUD_API_URL = "https://api.npoint.io/46d6b88ef1ed0bc2bd4d";
 
 export const getStoredNews = (): NewsItem[] => {
   if (typeof window === "undefined") return [];
@@ -109,16 +106,9 @@ export const getStoredNews = (): NewsItem[] => {
   }
 };
 
-// Cloud Fetch (Read Publicly)
 export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
   try {
-    const res = await fetch(`${PUBLIC_DB_URL}/latest`, {
-      headers: {
-        "X-Master-Key": MASTER_KEY,
-        "X-Bin-Meta": "false",
-      },
-      cache: "no-store",
-    });
+    const res = await fetch(CLOUD_API_URL, { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -129,27 +119,23 @@ export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
       }
     }
   } catch (e) {
-    console.error("Cloud fetch failed", e);
+    console.error("Cloud read error", e);
   }
   return getStoredNews();
 };
 
-// Cloud Save (Save Publicly)
 export const saveAllNews = async (newsArray: NewsItem[]) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_news", JSON.stringify(newsArray));
   }
   try {
-    await fetch(PUBLIC_DB_URL, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY,
-      },
+    await fetch(CLOUD_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newsArray),
     });
   } catch (e) {
-    console.error("Cloud save failed", e);
+    console.error("Cloud write error", e);
   }
 };
 
@@ -159,7 +145,6 @@ export const saveNews = async (article: NewsItem) => {
   await saveAllNews(updated);
 };
 
-// Ticker Store
 export const getStoredTicker = (): string => {
   if (typeof window === "undefined") return "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";
   return localStorage.getItem("cw_ticker") || "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";

@@ -7,29 +7,29 @@ import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../utils/tournament
 
 function ArticleContent() {
   const searchParams = useSearchParams();
-  const newsId = searchParams.get("id");
+  const slugParam = searchParams.get("slug") || searchParams.get("id");
   const [article, setArticle] = useState<NewsItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadArticle = async () => {
-      if (!newsId) {
+      if (!slugParam) {
         setLoading(false);
         return;
       }
 
-      // 1. First check local
+      // 1. Check local first
       const localNews = getStoredNews();
-      let found = localNews.find((item) => item.id === newsId || item.slug === newsId);
+      let found = localNews.find((item) => item.slug === slugParam || item.id === slugParam);
 
       if (found) {
         setArticle(found);
         setLoading(false);
       }
 
-      // 2. Always sync from Cloud for global consistency
+      // 2. Fetch live from Cloud
       const cloudNews = await fetchNewsFromCloud();
-      const cloudFound = cloudNews.find((item) => item.id === newsId || item.slug === newsId);
+      const cloudFound = cloudNews.find((item) => item.slug === slugParam || item.id === slugParam);
       
       if (cloudFound) {
         setArticle(cloudFound);
@@ -38,13 +38,13 @@ function ArticleContent() {
     };
 
     loadArticle();
-  }, [newsId]);
+  }, [slugParam]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-main)] text-white flex items-center justify-center p-4 font-sans">
         <p className="text-xs font-mono text-[#D4AF37] animate-pulse">
-          LOADING ARTICLE DETAILS FROM CLOUD...
+          LOADING ARTICLE DETAILS FROM GLOBAL CLOUD...
         </p>
       </div>
     );
