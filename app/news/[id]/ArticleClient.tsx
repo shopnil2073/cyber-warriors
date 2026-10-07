@@ -18,7 +18,6 @@ export default function ArticleClient() {
         return;
       }
 
-      // 1. Check local storage
       const localNews = getStoredNews();
       let found = localNews.find(
         (item) => item.slug === slugOrId || item.id === slugOrId
@@ -29,7 +28,6 @@ export default function ArticleClient() {
         setLoading(false);
       }
 
-      // 2. Fetch live from Global Cloud DB
       const cloudNews = await fetchNewsFromCloud();
       const cloudFound = cloudNews.find(
         (item) => item.slug === slugOrId || item.id === slugOrId
@@ -78,7 +76,6 @@ export default function ArticleClient() {
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
       <div className="max-w-3xl mx-auto space-y-6">
         
-        {/* Navigation Back Link */}
         <Link
           href="/news"
           className="inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] hover:underline uppercase"
@@ -86,7 +83,6 @@ export default function ArticleClient() {
           ‹ BACK TO NEWS & ANNOUNCEMENTS
         </Link>
 
-        {/* Article Box */}
         <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 md:p-8 space-y-6 shadow-xl">
           
           <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b border-[var(--border-color)]">
