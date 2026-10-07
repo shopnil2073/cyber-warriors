@@ -1,36 +1,40 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../utils/tournamentStore";
+import { useParams } from "next/navigation";
+import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../../utils/tournamentStore";
 
-function ArticleContent() {
-  const searchParams = useSearchParams();
-  const slugParam = searchParams.get("slug") || searchParams.get("id");
+export default function SingleNewsPage() {
+  const params = useParams();
+  const slugOrId = params?.id as string;
   const [article, setArticle] = useState<NewsItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadArticle = async () => {
-      if (!slugParam) {
+      if (!slugOrId) {
         setLoading(false);
         return;
       }
 
-      // 1. Check local first
+      // 1. Check local storage
       const localNews = getStoredNews();
-      let found = localNews.find((item) => item.slug === slugParam || item.id === slugParam);
+      let found = localNews.find(
+        (item) => item.slug === slugOrId || item.id === slugOrId
+      );
 
       if (found) {
         setArticle(found);
         setLoading(false);
       }
 
-      // 2. Fetch live from Cloud
+      // 2. Sync from live Global Cloud DB
       const cloudNews = await fetchNewsFromCloud();
-      const cloudFound = cloudNews.find((item) => item.slug === slugParam || item.id === slugParam);
-      
+      const cloudFound = cloudNews.find(
+        (item) => item.slug === slugOrId || item.id === slugOrId
+      );
+
       if (cloudFound) {
         setArticle(cloudFound);
       }
@@ -38,7 +42,7 @@ function ArticleContent() {
     };
 
     loadArticle();
-  }, [slugParam]);
+  }, [slugOrId]);
 
   if (loading) {
     return (
@@ -74,7 +78,7 @@ function ArticleContent() {
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
       <div className="max-w-3xl mx-auto space-y-6">
         
-        {/* Navigation Back Button */}
+        {/* Back Link */}
         <Link
           href="/news"
           className="inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] hover:underline uppercase"
@@ -82,10 +86,9 @@ function ArticleContent() {
           ‹ BACK TO NEWS & ANNOUNCEMENTS
         </Link>
 
-        {/* Main Article Card */}
+        {/* Article Box */}
         <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 md:p-8 space-y-6 shadow-xl">
           
-          {/* Category & Date Header */}
           <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b border-[var(--border-color)]">
             <span className="text-[10px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-3 py-1 rounded-full border border-[#D4AF37]/30 uppercase tracking-widest">
               {article.category || "ANNOUNCEMENT"}
@@ -95,17 +98,14 @@ function ArticleContent() {
             </span>
           </div>
 
-          {/* Title */}
           <h1 className="text-xl md:text-3xl font-black text-white uppercase tracking-wider leading-snug">
             {article.title}
           </h1>
 
-          {/* Author */}
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] font-bold">
             <span>BY {article.author || "CYBER WARRIORS ADMIN"}</span>
           </div>
 
-          {/* Image */}
           {article.imageUrl && (
             <div className="rounded-xl overflow-hidden border border-[var(--border-color)] max-h-96">
               <img
@@ -116,7 +116,6 @@ function ArticleContent() {
             </div>
           )}
 
-          {/* Content */}
           <div className="text-xs md:text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-normal space-y-4 pt-2">
             {article.content}
           </div>
@@ -125,13 +124,5 @@ function ArticleContent() {
 
       </div>
     </div>
-  );
-}
-
-export default function NewsDetailPage() {
-  return (
-    <Suspense fallback={<div className="text-white text-center p-10 font-mono text-xs">Loading Notice...</div>}>
-      <ArticleContent />
-    </Suspense>
   );
 }

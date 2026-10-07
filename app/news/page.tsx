@@ -9,6 +9,7 @@ export default function NewsPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadNewsData = async () => {
+    // Local read
     const localNews = getStoredNews();
     const publishedLocal = localNews.filter((item) => !item.status || item.status === "Published");
     if (publishedLocal.length > 0) {
@@ -16,6 +17,7 @@ export default function NewsPage() {
       setLoading(false);
     }
 
+    // Global Cloud sync
     const cloudNews = await fetchNewsFromCloud();
     const publishedCloud = cloudNews.filter((item) => !item.status || item.status === "Published");
     setNewsList(publishedCloud);
@@ -78,7 +80,7 @@ export default function NewsPage() {
         <div className="space-y-4">
           {loading && newsList.length === 0 ? (
             <div className="text-center py-12 text-xs font-mono text-[#D4AF37] animate-pulse">
-              LOADING LATEST NEWS FROM GLOBAL CLOUD...
+              LOADING LATEST NEWS FROM GLOBAL SERVER...
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
@@ -87,8 +89,8 @@ export default function NewsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
-                const targetSlug = item.slug || item.id;
-                const targetUrl = `/news-detail?slug=${targetSlug}`;
+                const cleanSlug = item.slug || item.id;
+                const targetUrl = `/news/${cleanSlug}`;
 
                 return (
                   <div
