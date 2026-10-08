@@ -88,7 +88,6 @@ export default function NewsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
                 const cleanSlug = item.slug || item.id;
-                // Clean link format: https://www.cyber-warriors.xyz/news/slug-name
                 const targetUrl = `/news/${cleanSlug}`;
 
                 return (

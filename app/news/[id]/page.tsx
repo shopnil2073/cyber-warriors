@@ -1,7 +1,10 @@
+import React from "react";
 import ArticleClient from "./ArticleClient";
 
 export async function generateStaticParams() {
-  return [{ id: "preview" }];
+  return [
+    { id: "preview" },
+  ];
 }
 
 export default function SingleNewsPage() {
