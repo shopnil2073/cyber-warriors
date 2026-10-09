@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 export default function WinStatCard() {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -30,32 +30,11 @@ export default function WinStatCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const images = cardRef.current.getElementsByTagName("img");
-      const promises = Array.from(images).map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      });
-      await Promise.all(promises);
-
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#05070B",
-        width: 500,
-        height: 500,
-      });
-
-      const image = canvas.toDataURL("image/png", 1.0);
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
       const link = document.createElement("a");
       link.download = `${(playerName || "Win_Stat_Card").replace(/\s+/g, "_")}.png`;
-      link.href = image;
-      document.body.appendChild(link);
+      link.href = dataUrl;
       link.click();
-      document.body.removeChild(link);
     } catch (err) {
       console.error(err);
       alert("Download failed!");
@@ -143,7 +122,6 @@ export default function WinStatCard() {
 
             {/* CENTER CONTENT */}
             <div className="grid grid-cols-3 items-center z-10 gap-2">
-              {/* LEFT BADGES */}
               <div className="space-y-2">
                 <div className="bg-[#121624]/90 border border-[#D4AF37]/40 p-2 rounded-xl text-center">
                   <div className="text-xs font-black text-[#D4AF37]">👑 {matches || "0"}</div>
@@ -159,7 +137,6 @@ export default function WinStatCard() {
                 </div>
               </div>
 
-              {/* CENTER PLAYER PHOTO */}
               <div className="h-48 flex items-center justify-center">
                 {playerImage ? (
                   <img src={playerImage} alt="Player" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]" />
@@ -170,7 +147,6 @@ export default function WinStatCard() {
                 )}
               </div>
 
-              {/* RIGHT CIRCULAR WIN RATE & MOTM */}
               <div className="space-y-3 text-center">
                 <div className="w-20 h-20 rounded-full border-4 border-[#D4AF37] flex flex-col items-center justify-center mx-auto bg-black/60 shadow-lg">
                   <span className="text-[7px] text-gray-400 uppercase">WIN RATE</span>
@@ -184,7 +160,6 @@ export default function WinStatCard() {
               </div>
             </div>
 
-            {/* BOTTOM NAME & LOCATION */}
             <div className="text-center border-t border-[#D4AF37]/30 pt-2 z-10 space-y-0.5">
               <h2 className="text-lg font-black text-white uppercase tracking-wider">{playerName}</h2>
               {location && (
@@ -192,7 +167,6 @@ export default function WinStatCard() {
               )}
             </div>
 
-            {/* FOOTER */}
             <div className="flex justify-between items-center text-[7px] font-mono text-gray-500 pt-1 z-10">
               <span>EVERY MATCH. EVERY MOMENT.</span>
               <span>EVERY VICTORY.</span>

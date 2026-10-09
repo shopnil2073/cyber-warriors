@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 export default function FarewellCard() {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -27,39 +27,14 @@ export default function FarewellCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      // 1. Ensure all preview images are fully loaded before rendering
-      const images = cardRef.current.getElementsByTagName("img");
-      const promises = Array.from(images).map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      });
-      await Promise.all(promises);
-
-      // 2. Render to HTML5 Canvas safely
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: "#05070B",
-        width: 500,
-        height: 500,
-      });
-
-      // 3. Generate PNG Blob / DataURL and trigger direct browser download
-      const image = canvas.toDataURL("image/png", 1.0);
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
       const link = document.createElement("a");
       link.download = `${(playerName || "Farewell_Card").replace(/\s+/g, "_")}.png`;
-      link.href = image;
-      document.body.appendChild(link);
+      link.href = dataUrl;
       link.click();
-      document.body.removeChild(link);
     } catch (err) {
-      console.error("Farewell card generation error:", err);
-      alert("Download failed! Doya kore image format verification korun.");
+      console.error(err);
+      alert("Download failed!");
     }
     setDownloading(false);
   };
@@ -75,74 +50,35 @@ export default function FarewellCard() {
         <div className="space-y-3">
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Player Name</label>
-            <input
-              type="text"
-              placeholder="e.g. TANBIR SHAD"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
-            />
+            <input type="text" placeholder="" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Matches (PL)</label>
-              <input
-                type="text"
-                placeholder=""
-                value={matches}
-                onChange={(e) => setMatches(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]"
-              />
+              <input type="text" placeholder="" value={matches} onChange={(e) => setMatches(e.target.value)} className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]" />
             </div>
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Wins (W)</label>
-              <input
-                type="text"
-                placeholder=""
-                value={wins}
-                onChange={(e) => setWins(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]"
-              />
+              <input type="text" placeholder="" value={wins} onChange={(e) => setWins(e.target.value)} className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]" />
             </div>
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Draws (D)</label>
-              <input
-                type="text"
-                placeholder=""
-                value={draws}
-                onChange={(e) => setDraws(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]"
-              />
+              <input type="text" placeholder="" value={draws} onChange={(e) => setDraws(e.target.value)} className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]" />
             </div>
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Win Rate %</label>
-              <input
-                type="text"
-                placeholder=""
-                value={winRate}
-                onChange={(e) => setWinRate(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]"
-              />
+              <input type="text" placeholder="" value={winRate} onChange={(e) => setWinRate(e.target.value)} className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-white outline-none focus:border-[#D4AF37]" />
             </div>
           </div>
 
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Player Photo</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="w-full bg-[#0B0E14] border border-[#23293A] p-1.5 text-xs rounded-xl text-gray-400 file:bg-[#121624] file:border-0 file:text-[#D4AF37] cursor-pointer"
-            />
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full bg-[#0B0E14] border border-[#23293A] p-1.5 text-xs rounded-xl text-gray-400 file:bg-[#121624] file:border-0 file:text-[#D4AF37] cursor-pointer" />
           </div>
         </div>
 
-        <button
-          onClick={downloadCard}
-          disabled={downloading}
-          className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-xl hover:brightness-110 transition-all uppercase cursor-pointer disabled:opacity-50 mt-4 shadow-lg"
-        >
+        <button onClick={downloadCard} disabled={downloading} className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-xl hover:brightness-110 transition-all uppercase cursor-pointer disabled:opacity-50 mt-4 shadow-lg">
           {downloading ? "GENERATING..." : "📥 DOWNLOAD FAREWELL CARD PNG"}
         </button>
       </div>
@@ -154,11 +90,8 @@ export default function FarewellCard() {
         </span>
 
         <div className="overflow-hidden rounded-2xl border border-[#D4AF37]/40 shadow-2xl bg-black max-w-[500px] mx-auto">
-          <div
-            ref={cardRef}
-            className="relative w-[500px] h-[500px] bg-[#05070B] text-white flex flex-col justify-between p-5 select-none overflow-hidden"
-            style={{ backgroundImage: "radial-gradient(circle at center, #241C06 0%, #05070B 85%)" }}
-          >
+          <div ref={cardRef} className="relative w-[500px] h-[500px] bg-[#05070B] text-white flex flex-col justify-between p-5 select-none overflow-hidden" style={{ backgroundImage: "radial-gradient(circle at center, #241C06 0%, #05070B 85%)" }}>
+            
             {/* HEADER METALLIC FAREWELL */}
             <div className="text-center z-10 space-y-1">
               <span className="text-xs">👑 CYBER WARRIORS</span>
@@ -172,11 +105,7 @@ export default function FarewellCard() {
             <div className="grid grid-cols-2 items-center z-10 gap-2 my-auto">
               <div className="h-44 flex items-center justify-center">
                 {playerImage ? (
-                  <img
-                    src={playerImage}
-                    alt="Player"
-                    className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(212,175,55,0.4)]"
-                  />
+                  <img src={playerImage} alt="Player" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(212,175,55,0.4)]" />
                 ) : (
                   <div className="text-[10px] text-gray-600 border border-dashed border-gray-700 p-4 rounded-xl text-center">
                     NO PHOTO
@@ -207,7 +136,9 @@ export default function FarewellCard() {
 
             {/* BOTTOM BANNER */}
             <div className="text-center z-10 border-t border-[#D4AF37]/40 pt-2 space-y-1 min-h-[40px]">
-              {playerName && <h2 className="text-sm font-black text-white uppercase">THANK YOU, {playerName}</h2>}
+              {playerName && (
+                <h2 className="text-sm font-black text-white uppercase">THANK YOU, {playerName}</h2>
+              )}
               <div className="bg-[#D4AF37] text-black text-[9px] font-black py-1 px-3 rounded inline-block tracking-widest uppercase">
                 THANK YOU FOR THE MEMORIES, WISHING YOU ALL THE BEST!
               </div>

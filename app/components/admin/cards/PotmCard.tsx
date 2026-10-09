@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 export default function PotmCard() {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -24,37 +24,14 @@ export default function PotmCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      // 1. Ensure all images are loaded
-      const images = cardRef.current.getElementsByTagName("img");
-      const promises = Array.from(images).map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      });
-      await Promise.all(promises);
-
-      // 2. Render to Canvas safely
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#05070B",
-        width: 500,
-        height: 500,
-      });
-
-      const image = canvas.toDataURL("image/png", 1.0);
+      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
       const link = document.createElement("a");
       link.download = `${(playerName || "POTM_Card").replace(/\s+/g, "_")}.png`;
-      link.href = image;
-      document.body.appendChild(link);
+      link.href = dataUrl;
       link.click();
-      document.body.removeChild(link);
     } catch (err) {
-      console.error("Download failed", err);
-      alert("Download failed! Check image format.");
+      console.error("Download error", err);
+      alert("Download error! Doya kore onno format image try korun.");
     }
     setDownloading(false);
   };
