@@ -13,14 +13,25 @@ export default function PotmCard() {
   const [month, setMonth] = useState("");
   const [playerImage, setPlayerImage] = useState<string>("");
 
-  // IMAGE POSITION & SCALE CONTROLS
+  // IMAGE CONTROLS
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const [borderWidth, setBorderWidth] = useState(4); // Default 4px border
-  const [brightness, setBrightness] = useState(100); // Default 100% brightness
+  const [borderWidth, setBorderWidth] = useState(4);
+  const [borderColor, setBorderColor] = useState("#FFFFFF"); // Default White Border
+  const [brightness, setBrightness] = useState(100);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isLocked, setIsLocked] = useState(false);
+
+  // CONVERT BLOB TO BASE64 DATA URL FOR html-to-image SAFETY
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   // AI BACKGROUND REMOVAL PROCESSOR
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,8 +45,8 @@ export default function PotmCard() {
 
     try {
       const blob = await removeBackground(file);
-      const url = URL.createObjectURL(blob);
-      setPlayerImage(url);
+      const base64Data = await blobToBase64(blob);
+      setPlayerImage(base64Data);
     } catch (err) {
       console.error("AI BG Removal failed, falling back to original:", err);
       const reader = new FileReader();
@@ -68,27 +79,31 @@ export default function PotmCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: false,
+        pixelRatio: 3,
+        quality: 1,
+      });
       const link = document.createElement("a");
       link.download = `${(playerName || "POTM_Card").replace(/\s+/g, "_")}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error("Download error", err);
-      alert("Download failed! Doya kore image position check korun.");
+      alert("Download failed! Doya kore image load o lock confirm korun.");
     }
     setDownloading(false);
   };
 
-  // Generate multi-directional drop-shadow for smooth cut-out border
+  // MULTI-DIRECTIONAL DROP SHADOW WITH DYNAMIC BORDER COLOR
   const getBorderShadowStyle = () => {
     if (borderWidth === 0) return "drop-shadow(0px 15px 25px rgba(0,0,0,0.8))";
     const bw = `${borderWidth}px`;
     return `
-      drop-shadow(${bw} 0px 0px #FFFFFF)
-      drop-shadow(-${bw} 0px 0px #FFFFFF)
-      drop-shadow(0px ${bw} 0px #FFFFFF)
-      drop-shadow(0px -${bw} 0px #FFFFFF)
+      drop-shadow(${bw} 0px 0px ${borderColor})
+      drop-shadow(-${bw} 0px 0px ${borderColor})
+      drop-shadow(0px ${bw} 0px ${borderColor})
+      drop-shadow(0px -${bw} 0px ${borderColor})
       drop-shadow(0px 15px 25px rgba(0,0,0,0.8))
     `;
   };
@@ -146,7 +161,31 @@ export default function PotmCard() {
                 ⚙️ IMAGE ADJUSTMENTS & BORDER CONTROLS
               </span>
 
-              {/* BORDER WIDTH SLIDER */}
+              {/* BORDER COLOR SELECTOR */}
+              <div>
+                <label className="text-[9px] text-gray-400 font-bold block mb-1.5">BORDER COLOR</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={borderColor}
+                    onChange={(e) => setBorderColor(e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-gray-700"
+                  />
+                  <div className="flex gap-1">
+                    {["#FFFFFF", "#D4AF37", "#FFD700", "#FF0000", "#00E5FF", "#00FF66"].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setBorderColor(color)}
+                        className="w-6 h-6 rounded-full border border-gray-600 transition-transform hover:scale-110"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* BORDER THICKNESS SLIDER */}
               <div>
                 <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-1">
                   <span>BORDER OUTLINE THICKNESS</span>
@@ -215,6 +254,7 @@ export default function PotmCard() {
                     setPos({ x: 0, y: 0 });
                     setScale(1);
                     setBorderWidth(4);
+                    setBorderColor("#FFFFFF");
                     setBrightness(100);
                   }}
                   className="bg-gray-800 text-gray-300 px-3 text-xs font-bold rounded-lg border border-gray-700 hover:bg-gray-700"
@@ -252,7 +292,7 @@ export default function PotmCard() {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           >
-            {/* DRAGGABLE & SCALABLE CUTOUT IMAGE WITH OUTLINE & BRIGHTNESS */}
+            {/* DRAGGABLE & SCALABLE CUTOUT IMAGE WITH COLOR OUTLINE & BRIGHTNESS */}
             <div className="absolute left-0 bottom-0 top-0 w-[60%] flex items-end justify-center z-10 overflow-hidden">
               {playerImage ? (
                 <img
