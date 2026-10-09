@@ -1,130 +1,37 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../utils/tournamentStore";
 
-function NewsMainContent() {
-  const searchParams = useSearchParams();
-  const slugParam = searchParams.get("slug") || searchParams.get("id");
-
+export default function NewsPage() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
-  const [article, setArticle] = useState<NewsItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadData = async () => {
-    const localNews = getStoredNews();
-    if (localNews.length > 0) {
-      setNewsList(localNews);
-      if (slugParam) {
-        const found = localNews.find((item) => item.slug === slugParam || item.id === slugParam);
-        if (found) setArticle(found);
-      }
+    // Local cache read
+    const local = getStoredNews();
+    if (local.length > 0) {
+      setNewsList(local.filter((i) => !i.status || i.status === "Published"));
       setLoading(false);
     }
 
-    const cloudNews = await fetchNewsFromCloud();
-    if (cloudNews && cloudNews.length > 0) {
-      setNewsList(cloudNews);
-      if (slugParam) {
-        const cloudFound = cloudNews.find((item) => item.slug === slugParam || item.id === slugParam);
-        if (cloudFound) setArticle(cloudFound);
-      }
+    // Cloud Live Read (for guest & incognito users)
+    const cloud = await fetchNewsFromCloud();
+    if (cloud.length > 0) {
+      setNewsList(cloud.filter((i) => !i.status || i.status === "Published"));
     }
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
-  }, [slugParam]);
+  }, []);
 
-  // If viewing a single article
-  if (slugParam) {
-    if (loading && !article) {
-      return (
-        <div className="min-h-screen bg-[var(--bg-main)] text-white flex items-center justify-center p-4 font-sans">
-          <p className="text-xs font-mono text-[#D4AF37] animate-pulse">
-            LOADING ARTICLE DETAILS FROM GLOBAL SERVER...
-          </p>
-        </div>
-      );
-    }
-
-    if (!article) {
-      return (
-        <div className="min-h-screen bg-[var(--bg-main)] text-white flex flex-col items-center justify-center p-4 space-y-4 font-sans">
-          <div className="text-4xl">📰</div>
-          <h1 className="text-base font-black text-[#D4AF37] uppercase tracking-wider">
-            ARTICLE NOT FOUND
-          </h1>
-          <p className="text-xs text-[var(--text-muted)] italic">
-            Requested news article does not exist or has been removed.
-          </p>
-          <Link
-            href="/news"
-            className="bg-[#D4AF37] text-black font-extrabold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all uppercase"
-          >
-            ‹ BACK TO ALL NEWS
-          </Link>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <Link
-            href="/news"
-            className="inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] hover:underline uppercase"
-          >
-            ‹ BACK TO NEWS & ANNOUNCEMENTS
-          </Link>
-
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 md:p-8 space-y-6 shadow-xl">
-            <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b border-[var(--border-color)]">
-              <span className="text-[10px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-3 py-1 rounded-full border border-[#D4AF37]/30 uppercase tracking-widest">
-                {article.category || "ANNOUNCEMENT"}
-              </span>
-              <span className="text-xs font-mono text-[var(--text-muted)]">
-                📅 {article.date || article.createdAt}
-              </span>
-            </div>
-
-            <h1 className="text-xl md:text-3xl font-black text-white uppercase tracking-wider leading-snug">
-              {article.title}
-            </h1>
-
-            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] font-bold">
-              <span>BY {article.author || "CYBER WARRIORS ADMIN"}</span>
-            </div>
-
-            {article.imageUrl && (
-              <div className="rounded-xl overflow-hidden border border-[var(--border-color)] max-h-96">
-                <img
-                  src={article.imageUrl}
-                  alt={article.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="text-xs md:text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-normal space-y-4 pt-2">
-              {article.content}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // News list view
-  const publishedNews = newsList.filter((item) => !item.status || item.status === "Published");
   const filteredNews =
     selectedCategory === "ALL"
-      ? publishedNews
-      : publishedNews.filter(
+      ? newsList
+      : newsList.filter(
           (item) => (item.category || "").toUpperCase().trim() === selectedCategory.toUpperCase().trim()
         );
 
@@ -144,15 +51,9 @@ function NewsMainContent() {
           </p>
         </div>
 
+        {/* Category Filters */}
         <div className="flex overflow-x-auto gap-2 border-b border-[var(--border-color)] pb-3 scrollbar-none">
-          {[
-            "ALL",
-            "ANNOUNCEMENT",
-            "MATCH REPORT",
-            "TOP PERFORMER",
-            "TOURNAMENT UPDATE",
-            "TRANSFER",
-          ].map((cat) => (
+          {["ALL", "ANNOUNCEMENT", "MATCH REPORT", "TOP PERFORMER", "TOURNAMENT UPDATE", "TRANSFER"].map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -167,10 +68,11 @@ function NewsMainContent() {
           ))}
         </div>
 
+        {/* News Cards */}
         <div className="space-y-4">
           {loading && newsList.length === 0 ? (
             <div className="text-center py-12 text-xs font-mono text-[#D4AF37] animate-pulse">
-              LOADING LATEST NEWS FROM GLOBAL SERVER...
+              LOADING LATEST NEWS...
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
@@ -179,8 +81,9 @@ function NewsMainContent() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
-                const targetSlug = item.slug || item.id;
-                const targetUrl = `/news?slug=${targetSlug}`;
+                const slug = item.slug || item.id;
+                // TRC-BD Style Clean URL: /news/article-slug-name
+                const targetUrl = `/news/${slug}`;
 
                 return (
                   <div
@@ -235,13 +138,5 @@ function NewsMainContent() {
 
       </div>
     </div>
-  );
-}
-
-export default function NewsPage() {
-  return (
-    <Suspense fallback={<div className="text-white text-center p-12 font-mono text-xs">Loading Press Center...</div>}>
-      <NewsMainContent />
-    </Suspense>
   );
 }
