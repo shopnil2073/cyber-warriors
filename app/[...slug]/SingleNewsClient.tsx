@@ -3,11 +3,15 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../../utils/tournamentStore";
+import { fetchNewsFromCloud, getStoredNews, NewsItem } from "@/app/utils/tournamentStore";
 
-export default function ArticleClient() {
+export default function SingleNewsClient() {
   const params = useParams();
-  const slugOrId = params?.id as string;
+  
+  // Catch-all route returns an array, extract the first element or string
+  const rawSlug = params?.slug;
+  const slugOrId = Array.isArray(rawSlug) ? rawSlug[0] : (rawSlug as string);
+
   const [article, setArticle] = useState<NewsItem | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +44,7 @@ export default function ArticleClient() {
     return (
       <div className="min-h-screen bg-[var(--bg-main)] text-white flex items-center justify-center p-4 font-sans">
         <p className="text-xs font-mono text-[#D4AF37] animate-pulse">
-          LOADING ARTICLE...
+          LOADING ARTICLE DETAILS FROM GLOBAL CLOUD...
         </p>
       </div>
     );
@@ -69,7 +73,6 @@ export default function ArticleClient() {
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
       <div className="max-w-3xl mx-auto space-y-6">
-        
         <Link
           href="/news"
           className="inline-flex items-center gap-2 text-xs font-bold text-[#D4AF37] hover:underline uppercase"
@@ -109,7 +112,6 @@ export default function ArticleClient() {
             {article.content}
           </div>
         </div>
-
       </div>
     </div>
   );

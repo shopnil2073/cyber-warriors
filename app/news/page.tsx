@@ -9,14 +9,14 @@ export default function NewsPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadData = async () => {
-    // Local cache read
+    // Local read
     const local = getStoredNews();
     if (local.length > 0) {
       setNewsList(local.filter((i) => !i.status || i.status === "Published"));
       setLoading(false);
     }
 
-    // Cloud Live Read (for guest & incognito users)
+    // Cloud Live Read (for guest, incognito & all accounts)
     const cloud = await fetchNewsFromCloud();
     if (cloud.length > 0) {
       setNewsList(cloud.filter((i) => !i.status || i.status === "Published"));
@@ -39,6 +39,7 @@ export default function NewsPage() {
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
       <div className="max-w-4xl mx-auto space-y-6">
         
+        {/* Header Title */}
         <div className="text-center space-y-1">
           <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">
             CYBER WARRIORS OFFICIAL PRESS & NEWS
@@ -68,11 +69,11 @@ export default function NewsPage() {
           ))}
         </div>
 
-        {/* News Cards */}
+        {/* News Cards List */}
         <div className="space-y-4">
           {loading && newsList.length === 0 ? (
             <div className="text-center py-12 text-xs font-mono text-[#D4AF37] animate-pulse">
-              LOADING LATEST NEWS...
+              LOADING LATEST NEWS FROM SERVER...
             </div>
           ) : filteredNews.length === 0 ? (
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
@@ -82,8 +83,8 @@ export default function NewsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredNews.map((item) => {
                 const slug = item.slug || item.id;
-                // TRC-BD Style Clean URL: /news/article-slug-name
-                const targetUrl = `/news/${slug}`;
+                // TRC-BD Style Direct Clean URL: https://www.cyber-warriors.xyz/article-slug-name
+                const targetUrl = `/${slug}`;
 
                 return (
                   <div
