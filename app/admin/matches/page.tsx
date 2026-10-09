@@ -5,21 +5,19 @@ import { useRouter } from "next/navigation";
 import {
   saveFixture,
   getStoredFixtures,
-  updateFixtureScore,
   getStoredStandings,
   updatePlayerInfo,
-  saveNews,
-  saveTicker,
   Fixture,
   Standing,
 } from "../../utils/tournamentStore";
+import CardCreatorTab from "../../components/admin/CardCreatorTab";
 
 const SUPER_ADMIN = "shopnilhossainhim@gmail.com";
 
 export default function CommandCenter() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<{ name?: string; email?: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<"matches" | "players" | "news" | "admins">("matches");
+  const [activeTab, setActiveTab] = useState<"card_creator" | "matches" | "players" | "admins">("card_creator");
 
   // ডাটা স্টেটসমূহ
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -144,6 +142,7 @@ export default function CommandCenter() {
         {/* নেভিগেশন ট্যাবস */}
         <div className="flex overflow-x-auto gap-2 border-b border-[var(--border-color)] pb-3 scrollbar-none">
           {[
+            { id: "card_creator", label: "🎨 CARD CREATOR" },
             { id: "matches", label: "📋 MATCHDAY MANAGEMENT" },
             { id: "players", label: "👤 PLAYER STATS & RANKING" },
             { id: "admins", label: "🔑 PERMISSION CONTROL" },
@@ -151,7 +150,7 @@ export default function CommandCenter() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`text-xs font-black px-5 py-2.5 rounded-xl whitespace-nowrap transition-all uppercase tracking-wider ${
+              className={`text-xs font-black px-5 py-2.5 rounded-xl whitespace-nowrap transition-all uppercase tracking-wider cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20 scale-105"
                   : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-white border border-[var(--border-color)]"
@@ -162,7 +161,10 @@ export default function CommandCenter() {
           ))}
         </div>
 
-        {/* TAB ১: ম্যাচ ম্যানেজমেন্ট */}
+        {/* TAB ১: কার্ড ক্রিয়েটর (NEW) */}
+        {activeTab === "card_creator" && <CardCreatorTab />}
+
+        {/* TAB ২: ম্যাচ ম্যানেজমেন্ট */}
         {activeTab === "matches" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 shadow-lg space-y-4">
@@ -210,7 +212,7 @@ export default function CommandCenter() {
 
                 <button
                   type="submit"
-                  className="w-full bg-[#D4AF37] text-black font-black text-xs py-3 rounded-xl hover:bg-[#b5942d] transition-all uppercase tracking-wider"
+                  className="w-full bg-[#D4AF37] text-black font-black text-xs py-3 rounded-xl hover:bg-[#b5942d] transition-all uppercase tracking-wider cursor-pointer"
                 >
                   PUBLISH MATCH RESULT
                 </button>
@@ -241,7 +243,7 @@ export default function CommandCenter() {
           </div>
         )}
 
-        {/* TAB ২: প্লেয়ার ইনফো ও র্যাঙ্কিং */}
+        {/* TAB ৩: প্লেয়ার ইনফো ও র্যাঙ্কিং */}
         {activeTab === "players" && (
           <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 shadow-lg space-y-4 max-w-xl mx-auto">
             <h2 className="text-sm font-black text-[#D4AF37] uppercase tracking-wider border-b border-[var(--border-color)] pb-3">
@@ -292,7 +294,7 @@ export default function CommandCenter() {
 
               <button
                 type="submit"
-                className="w-full bg-[#D4AF37] text-black font-black text-xs py-3 rounded-xl hover:bg-[#b5942d] transition-all uppercase tracking-wider"
+                className="w-full bg-[#D4AF37] text-black font-black text-xs py-3 rounded-xl hover:bg-[#b5942d] transition-all uppercase tracking-wider cursor-pointer"
               >
                 UPDATE PLAYER DATA
               </button>
@@ -300,7 +302,7 @@ export default function CommandCenter() {
           </div>
         )}
 
-        {/* TAB ৩: পারমিশন কন্ট্রোল (অ্যাডমিন ইমেইল অ্যাক্সেস) */}
+        {/* TAB ৪: পারমিশন কন্ট্রোল */}
         {activeTab === "admins" && (
           <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 shadow-lg space-y-6 max-w-xl mx-auto">
             <div>
@@ -312,7 +314,6 @@ export default function CommandCenter() {
               </p>
             </div>
 
-            {/* সুপার অ্যাডমিনদের জন্য নতুন অ্যাডমিন যুক্ত করার ফর্ম */}
             {isSuperAdmin ? (
               <form onSubmit={handleAddAdmin} className="space-y-3">
                 <label className="text-[10px] font-bold text-[var(--text-muted)] block">নতুন অ্যাডমিন ইমেইল যুক্ত করুন</label>
@@ -327,7 +328,7 @@ export default function CommandCenter() {
                   />
                   <button
                     type="submit"
-                    className="bg-[#D4AF37] text-black font-black text-xs px-5 rounded-xl hover:bg-[#b5942d] transition-all uppercase"
+                    className="bg-[#D4AF37] text-black font-black text-xs px-5 rounded-xl hover:bg-[#b5942d] transition-all uppercase cursor-pointer"
                   >
                     ADD
                   </button>
@@ -339,7 +340,6 @@ export default function CommandCenter() {
               </div>
             )}
 
-            {/* অ্যাডমিন লিস্ট */}
             <div className="space-y-2 pt-2">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">অনুমোদিত অ্যাডমিনদের তালিকা:</h3>
               <div className="space-y-2">
@@ -354,7 +354,7 @@ export default function CommandCenter() {
                     ) : isSuperAdmin ? (
                       <button
                         onClick={() => handleRemoveAdmin(email)}
-                        className="text-[10px] font-bold text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-1 rounded-lg"
+                        className="text-[10px] font-bold text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-1 rounded-lg cursor-pointer"
                       >
                         REMOVE
                       </button>
