@@ -1,178 +1,99 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import CardCreatorTab from "../components/admin/CardCreatorTab";
 
-export interface Article {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  category: "Announcement" | "Match Report" | "Top Performer" | "Tournament Update" | "Transfer";
-  status: "Published" | "Draft";
-  author: string;
-  imageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+const ADMIN_PASSWORD = "cyber123";
+const AUTH_KEY = "cw_admin_auth_timestamp";
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-export default function NewsPage() {
-  const [newsList, setNewsList] = useState<Article[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+export default function AdminConsole() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>("");
+  const [loginError, setLoginError] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"card" | "match" | "news">("card");
 
   useEffect(() => {
-    const loadNews = () => {
-      try {
-        const stored = localStorage.getItem("cw_news_articles");
-        if (stored) {
-          const parsed: Article[] = JSON.parse(stored);
-          setNewsList(parsed.filter((item) => item.status === "Published"));
-        } else {
-          setNewsList([]);
-        }
-      } catch (e) {
-        console.error("Error loading news articles", e);
+    const savedTimestamp = localStorage.getItem(AUTH_KEY);
+    if (savedTimestamp) {
+      const loginTime = parseInt(savedTimestamp, 10);
+      if (new Date().getTime() - loginTime < TWENTY_FOUR_HOURS) {
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem(AUTH_KEY);
       }
-    };
-
-    loadNews();
-
-    // Storage change listener for instant cross-tab sync
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "cw_news_articles") {
-        loadNews();
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    }
   }, []);
 
-  const filteredNews =
-    selectedCategory === "ALL"
-      ? newsList
-      : newsList.filter(
-          (item) => item.category.toUpperCase() === selectedCategory.toUpperCase()
-        );
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      localStorage.setItem(AUTH_KEY, new Date().getTime().toString());
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("❌ ভুল পাসওয়ার্ড!");
+    }
+  };
 
-  const featuredArticle = newsList.length > 0 ? newsList[0] : null;
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#05070B] text-white flex items-center justify-center p-4">
+        <div className="bg-[#121624] border border-[#D4AF37]/40 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+          <div className="text-center space-y-1">
+            <span className="text-3xl">👑</span>
+            <h1 className="text-lg font-black text-[#D4AF37]">CYBER WARRIORS ADMIN</h1>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-3">
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-xl text-center text-white outline-none focus:border-[#D4AF37]"
+            />
+            {loginError && <p className="text-xs text-red-400 text-center font-bold">{loginError}</p>}
+            <button type="submit" className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-xl uppercase">
+              UNLOCK CONSOLE
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Subtitle */}
-        <p className="text-center text-xs font-semibold text-[var(--text-muted)]">
-          টুর্নামেন্টের সর্বশেষ আপডেট, ম্যাচ রিপোর্ট, প্লেয়ার ট্রান্সফার ও অফিসিয়াল নোটিশ
-        </p>
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-24 font-sans">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* HEADER */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] p-5 rounded-2xl flex justify-between items-center shadow-xl">
+          <h1 className="text-lg font-black text-[#D4AF37] uppercase">📟 ADMIN COMMAND CENTER</h1>
+          <button onClick={() => { localStorage.removeItem(AUTH_KEY); setIsAuthenticated(false); }} className="text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-xl">
+            LOGOUT
+          </button>
+        </div>
 
-        {/* Category Filter Tabs */}
+        {/* TOP TABS */}
         <div className="flex overflow-x-auto gap-2 border-b border-[var(--border-color)] pb-3 scrollbar-none">
           {[
-            "ALL",
-            "ANNOUNCEMENT",
-            "MATCH REPORT",
-            "TOP PERFORMER",
-            "TOURNAMENT UPDATE",
-            "TRANSFER",
-          ].map((cat) => (
+            { id: "card", label: "🎨 CARD CREATOR" },
+            { id: "match", label: "📋 MATCHDAY HQ" },
+            { id: "news", label: "✍️ NEWS PANEL" },
+          ].map((tab) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`text-xs font-extrabold px-4 py-2 rounded-lg whitespace-nowrap transition-all cursor-pointer uppercase ${
-                selectedCategory === cat
-                  ? "bg-[#D4AF37] text-black shadow-md"
-                  : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-white"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`text-xs font-black px-5 py-2.5 rounded-xl uppercase transition-all ${
+                activeTab === tab.id ? "bg-[#D4AF37] text-black shadow-lg" : "bg-[var(--bg-card)] text-gray-400 border border-[var(--border-color)]"
               }`}
             >
-              {cat}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* FEATURED ARTICLE (Top Banner) */}
-        {featuredArticle && selectedCategory === "ALL" && (
-          <div className="bg-[var(--bg-card)] border border-[#D4AF37]/50 rounded-2xl p-5 shadow-lg relative overflow-hidden space-y-3">
-            <span className="bg-[#D4AF37] text-black text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block">
-              ⚡ FEATURED ARTICLE
-            </span>
-            <span className="text-[10px] font-mono text-[var(--text-muted)] float-right">
-              📅 {featuredArticle.createdAt}
-            </span>
-
-            {featuredArticle.imageUrl && (
-              <img
-                src={featuredArticle.imageUrl}
-                alt={featuredArticle.title}
-                className="w-full h-48 md:h-64 object-cover rounded-xl border border-[var(--border-color)]"
-              />
-            )}
-
-            <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-wider">
-              {featuredArticle.title}
-            </h2>
-
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-3">
-              {featuredArticle.content}
-            </p>
-
-            <div className="pt-2 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] font-bold text-[#D4AF37]">
-              <span>CATEGORY: {featuredArticle.category.toUpperCase()}</span>
-              <span>AUTHOR: {featuredArticle.author}</span>
-            </div>
-          </div>
-        )}
-
-        {/* ALL ARTICLES LIST */}
-        <div className="space-y-4">
-          {filteredNews.length === 0 ? (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
-              এই ক্যাটাগরিতে এখনো কোনো খবর প্রকাশিত হয়নি।
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredNews.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[#D4AF37]/40 rounded-xl p-4 space-y-3 transition-all flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    {item.imageUrl && (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-36 object-cover rounded-lg border border-[var(--border-color)]"
-                      />
-                    )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-2.5 py-1 rounded border border-[#D4AF37]/30 uppercase">
-                        {item.category}
-                      </span>
-                      <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                        📅 {item.createdAt}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-extrabold text-white uppercase line-clamp-2">
-                      {item.title}
-                    </h3>
-
-                    <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
-                      {item.content}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] text-[var(--text-muted)] font-bold">
-                    <span>By {item.author}</span>
-                    <span className="text-[#D4AF37] hover:underline cursor-pointer">
-                      READ MORE ›
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+        {/* TAB CONTENTS */}
+        {activeTab === "card" && <CardCreatorTab />}
       </div>
     </div>
   );
