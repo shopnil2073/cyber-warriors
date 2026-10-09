@@ -31,14 +31,23 @@ export default function GoalStatCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true });
-      const image = canvas.toDataURL("image/png");
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#05070B",
+      });
+      const image = canvas.toDataURL("image/png", 1.0);
       const link = document.createElement("a");
       link.href = image;
       link.download = `${(playerName || "Goal_Stat_Card").replace(/\s+/g, "_")}.png`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error(err);
+      alert("Download failed!");
     }
     setDownloading(false);
   };
@@ -108,7 +117,7 @@ export default function GoalStatCard() {
             {/* HEADER */}
             <div className="flex justify-between items-center z-10">
               <div className="flex items-center gap-2">
-                <img src="/logo.jpg" alt="Logo" className="w-9 h-9 rounded-full border border-[#D4AF37]" />
+                <img src="/logo.jpg" alt="Logo" crossOrigin="anonymous" className="w-9 h-9 rounded-full border border-[#D4AF37]" />
                 <span className="text-[10px] font-black tracking-widest text-[#D4AF37]">CYBER WARRIORS</span>
               </div>
               <span className="text-[9px] font-mono text-gray-400 uppercase tracking-widest">GOAL MACHINE UNLOCKED ⚽</span>
@@ -136,7 +145,7 @@ export default function GoalStatCard() {
 
               <div className="h-48 flex items-center justify-center">
                 {playerImage ? (
-                  <img src={playerImage} alt="Player" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]" />
+                  <img src={playerImage} alt="Player" crossOrigin="anonymous" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]" />
                 ) : (
                   <div className="text-[10px] text-gray-600 border border-dashed border-gray-700 p-4 rounded-xl text-center">
                     NO PHOTO

@@ -27,14 +27,23 @@ export default function FarewellCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true });
-      const image = canvas.toDataURL("image/png");
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#05070B",
+      });
+      const image = canvas.toDataURL("image/png", 1.0);
       const link = document.createElement("a");
       link.href = image;
       link.download = `${(playerName || "Farewell_Card").replace(/\s+/g, "_")}.png`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error(err);
+      alert("Download failed!");
     }
     setDownloading(false);
   };
@@ -105,7 +114,7 @@ export default function FarewellCard() {
             <div className="grid grid-cols-2 items-center z-10 gap-2 my-auto">
               <div className="h-44 flex items-center justify-center">
                 {playerImage ? (
-                  <img src={playerImage} alt="Player" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(212,175,55,0.4)]" />
+                  <img src={playerImage} alt="Player" crossOrigin="anonymous" className="max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(212,175,55,0.4)]" />
                 ) : (
                   <div className="text-[10px] text-gray-600 border border-dashed border-gray-700 p-4 rounded-xl text-center">
                     NO PHOTO
