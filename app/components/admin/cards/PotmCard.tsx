@@ -24,23 +24,37 @@ export default function PotmCard() {
     if (!cardRef.current) return;
     setDownloading(true);
     try {
+      // 1. Ensure all images are loaded
+      const images = cardRef.current.getElementsByTagName("img");
+      const promises = Array.from(images).map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      await Promise.all(promises);
+
+      // 2. Render to Canvas safely
       const canvas = await html2canvas(cardRef.current, {
         scale: 3,
         useCORS: true,
         allowTaint: true,
-        logging: false,
         backgroundColor: "#05070B",
+        width: 500,
+        height: 500,
       });
+
       const image = canvas.toDataURL("image/png", 1.0);
       const link = document.createElement("a");
-      link.href = image;
       link.download = `${(playerName || "POTM_Card").replace(/\s+/g, "_")}.png`;
+      link.href = image;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
       console.error("Download failed", err);
-      alert("Image download korte shomoshya hocche! Doya kore image photo thikvabe upload ache kina dekhoon.");
+      alert("Download failed! Check image format.");
     }
     setDownloading(false);
   };
@@ -69,7 +83,7 @@ export default function PotmCard() {
             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Month</label>
             <input
               type="text"
-              placeholder="e.g. SEPTEMBER"
+              placeholder="e.g. OCTOBER"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
               className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -113,7 +127,7 @@ export default function PotmCard() {
             {/* TOP BRANDING */}
             <div className="flex justify-between items-center z-10">
               <div className="flex items-center gap-2">
-                <img src="/logo.jpg" alt="Logo" crossOrigin="anonymous" className="w-10 h-10 rounded-full border border-[#D4AF37]" />
+                <img src="/logo.jpg" alt="Logo" className="w-10 h-10 rounded-full border border-[#D4AF37]" />
                 <div>
                   <h4 className="text-[10px] font-black tracking-widest text-[#D4AF37]">CYBER WARRIORS</h4>
                   <p className="text-[7px] font-mono text-gray-400">TOGETHER WE FIGHT FOR GLORY</p>
@@ -126,7 +140,7 @@ export default function PotmCard() {
             <div className="grid grid-cols-2 items-center my-auto z-10 gap-2">
               <div className="relative h-64 w-full flex items-center justify-center">
                 {playerImage ? (
-                  <img src={playerImage} alt="Player" crossOrigin="anonymous" className="max-h-full object-contain filter drop-shadow-[0_10px_25px_rgba(212,175,55,0.4)]" />
+                  <img src={playerImage} alt="Player" className="max-h-full object-contain filter drop-shadow-[0_10px_25px_rgba(212,175,55,0.4)]" />
                 ) : (
                   <div className="text-xs text-gray-600 border border-dashed border-gray-700 p-8 rounded-xl text-center">
                     NO PHOTO UPLOADED
