@@ -15,6 +15,7 @@ export default function PotmCard() {
 
   // IMAGE CONTROLS
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [moveStep, setMoveStep] = useState(10); // Default 10px per button click
   const [scale, setScale] = useState(1);
   const [borderWidth, setBorderWidth] = useState(4);
   const [borderColor, setBorderColor] = useState("#FFFFFF"); // Default White Border
@@ -33,7 +34,7 @@ export default function PotmCard() {
     });
   };
 
-  // AI BACKGROUND REMOVAL PROCESSOR
+  // FAST AI BACKGROUND REMOVAL PROCESSOR
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -44,7 +45,14 @@ export default function PotmCard() {
     setScale(1);
 
     try {
-      const blob = await removeBackground(file);
+      // "isnet_fp16" or "isnet_quint8" is the fastest compressed AI model
+      const blob = await removeBackground(file, {
+        model: "isnet_fp16",
+        output: {
+          format: "image/png",
+          quality: 0.8,
+        },
+      });
       const base64Data = await blobToBase64(blob);
       setPlayerImage(base64Data);
     } catch (err) {
@@ -56,7 +64,26 @@ export default function PotmCard() {
     setRemovingBg(false);
   };
 
-  // DRAG HANDLERS
+  // DIRECTIONAL BUTTON HANDLERS
+  const moveImage = (direction: "up" | "down" | "left" | "right") => {
+    if (isLocked || !playerImage) return;
+    setPos((prev) => {
+      switch (direction) {
+        case "up":
+          return { ...prev, y: prev.y - moveStep };
+        case "down":
+          return { ...prev, y: prev.y + moveStep };
+        case "left":
+          return { ...prev, x: prev.x - moveStep };
+        case "right":
+          return { ...prev, x: prev.x + moveStep };
+        default:
+          return prev;
+      }
+    });
+  };
+
+  // MOUSE & TOUCH DRAG HANDLERS
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isLocked || !playerImage) return;
     setIsDragging(true);
@@ -73,6 +100,23 @@ export default function PotmCard() {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isLocked || !playerImage || e.touches.length === 0) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.touches[0].clientX - pos.x,
+      y: e.touches[0].clientY - pos.y,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || isLocked || e.touches.length === 0) return;
+    setPos({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y,
+    });
   };
 
   const downloadCard = async () => {
@@ -149,17 +193,79 @@ export default function PotmCard() {
             />
             {removingBg && (
               <p className="text-[10px] text-amber-400 mt-1 font-bold animate-pulse">
-                ⏳ AI is removing background... Please wait.
+                ⏳ Fast AI is removing background... Please wait.
               </p>
             )}
           </div>
 
-          {/* CONTROLS FOR IMAGE ADJUSTMENTS */}
+          {/* CONTROLS FOR IMAGE ADJUSTMENTS & POSITIONING */}
           {playerImage && (
             <div className="border border-[#23293A] bg-[#0B0E14] p-4 rounded-xl space-y-4">
               <span className="text-[10px] font-bold text-[#D4AF37] uppercase block">
-                ⚙️ IMAGE ADJUSTMENTS & BORDER CONTROLS
+                ⚙️ IMAGE ADJUSTMENTS & POSITION CONTROLS
               </span>
+
+              {/* DIRECTIONAL ARROW BUTTONS */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[9px] text-gray-400 font-bold uppercase">
+                    POSITION CONTROLS (UP / DOWN / LEFT / RIGHT)
+                  </label>
+                  <div className="flex gap-1">
+                    {[5, 10, 20].map((step) => (
+                      <button
+                        key={step}
+                        type="button"
+                        onClick={() => setMoveStep(step)}
+                        className={`text-[8px] font-bold px-2 py-0.5 rounded ${
+                          moveStep === step
+                            ? "bg-[#D4AF37] text-black"
+                            : "bg-[#121624] text-gray-400 border border-gray-700"
+                        }`}
+                      >
+                        {step}px
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1.5 bg-[#121624] p-3 rounded-xl border border-[#23293A]">
+                  <button
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() => moveImage("up")}
+                    className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                  >
+                    ▲
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => moveImage("left")}
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => moveImage("down")}
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                    >
+                      ▼
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => moveImage("right")}
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               {/* BORDER COLOR SELECTOR */}
               <div>
@@ -291,6 +397,8 @@ export default function PotmCard() {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
           >
             {/* DRAGGABLE & SCALABLE CUTOUT IMAGE WITH COLOR OUTLINE & BRIGHTNESS */}
             <div className="absolute left-0 bottom-0 top-0 w-[60%] flex items-end justify-center z-10 overflow-hidden">
@@ -299,6 +407,7 @@ export default function PotmCard() {
                   src={playerImage}
                   alt="Player Cutout"
                   onMouseDown={handleMouseDown}
+                  onTouchStart={handleTouchStart}
                   draggable={false}
                   className={`max-h-[92%] w-auto object-contain ${
                     isLocked ? "cursor-default" : "cursor-grab active:cursor-grabbing"
