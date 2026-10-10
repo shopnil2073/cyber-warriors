@@ -3,20 +3,18 @@
 import React, { useState } from "react";
 import PotmCard from "./cards/PotmCard";
 import WinStatCard from "./cards/WinStatCard";
-import GoalStatCard from "./cards/GoalStatCard";
 import FarewellCard from "./cards/FarewellCard";
 
 export default function CardCreatorTab() {
-  const [subTab, setSubTab] = useState<"potm" | "win" | "goal" | "farewell">("potm");
+  const [subTab, setSubTab] = useState<"potm" | "win" | "farewell">("potm");
 
   return (
     <div className="space-y-6">
-      {/* 4 CATEGORIES SUB-NAVIGATION */}
+      {/* 3 CATEGORIES SUB-NAVIGATION */}
       <div className="flex flex-wrap gap-2 border-b border-[#23293A] pb-4">
         {[
           { id: "potm", label: "🌟 PLAYER OF THE MONTH" },
-          { id: "win", label: "🏆 WIN STAT CARD" },
-          { id: "goal", label: "⚽ GOAL STAT CARD" },
+          { id: "win", label: "🏆 WIN/GOAL STAT CARD" },
           { id: "farewell", label: "👑 FAREWELL CARD" },
         ].map((tab) => (
           <button
@@ -36,7 +34,6 @@ export default function CardCreatorTab() {
       {/* RENDER ACTIVE TEMPLATE */}
       {subTab === "potm" && <PotmCard />}
       {subTab === "win" && <WinStatCard />}
-      {subTab === "goal" && <GoalStatCard />}
       {subTab === "farewell" && <FarewellCard />}
     </div>
   );

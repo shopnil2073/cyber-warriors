@@ -11,7 +11,11 @@ export default function WinStatCard() {
 
   // INPUT STATES
   const [playerName, setPlayerName] = useState("");
-  const [winPostTitle, setWinPostTitle] = useState("50 WINS");
+  
+  // POST TITLE DROPDOWN STATES
+  const [postType, setPostType] = useState("WINS");
+  const [postAmount, setPostAmount] = useState("50");
+
   const [matches, setMatches] = useState("");
   const [wins, setWins] = useState("");
   const [draws, setDraws] = useState("");
@@ -175,18 +179,12 @@ export default function WinStatCard() {
     `;
   };
 
-  // FORMAT HEADER TITLE CLEANLY
-  const formatHeaderTitle = (title: string) => {
-    if (!title.trim()) return "50 WINS";
-    return title.toUpperCase();
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 items-start p-2 md:p-0">
       {/* INPUT FORM (MOBILE FRIENDLY) */}
       <div className="bg-[#121624] border border-[#23293A] p-4 md:p-6 rounded-2xl space-y-4 shadow-xl w-full">
         <h3 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest border-b border-[#23293A] pb-2 flex items-center gap-2">
-          <span>🏆</span> WIN STAT CARD INPUTS
+          <span>🏆</span> WIN/GOAL STAT CARD INPUTS
         </h3>
 
         <div className="space-y-3.5">
@@ -202,15 +200,37 @@ export default function WinStatCard() {
               />
             </div>
 
+            {/* WIN/GOAL POST TITLE DROPDOWN SECTION */}
             <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">WIN POST TITLE</label>
-              <input
-                type="text"
-                placeholder="e.g. 50 WINS"
-                value={winPostTitle}
-                onChange={(e) => setWinPostTitle(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
-              />
+              <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">
+                WIN/GOAL POST TITLE
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {/* TYPE DROPDOWN */}
+                <select
+                  value={postType}
+                  onChange={(e) => setPostType(e.target.value)}
+                  className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37] cursor-pointer"
+                >
+                  <option value="WINS">WINS</option>
+                  <option value="GOALS">GOALS</option>
+                </select>
+
+                {/* AMOUNT DROPDOWN */}
+                <select
+                  value={postAmount}
+                  onChange={(e) => setPostAmount(e.target.value)}
+                  className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37] cursor-pointer"
+                >
+                  {["50", "100", "150", "200", "250", "300", "350", "400", "450", "500", "550", "600"].map(
+                    (amt) => (
+                      <option key={amt} value={amt}>
+                        {amt}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -506,47 +526,47 @@ export default function WinStatCard() {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleMouseUp}
           >
-            {/* BIG GOLDEN HEADER: "50 WINS" */}
+            {/* BIG GOLDEN HEADER: e.g. "50 WINS" OR "100 GOALS" */}
             <div className="absolute top-[52px] left-0 right-0 text-center z-10 pointer-events-none">
               <h1 className="text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-[#FFF0B3] via-[#D4AF37] to-[#8C6D1F] tracking-tighter uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
-                {formatHeaderTitle(winPostTitle)}
+                {`${postAmount} ${postType}`}
               </h1>
             </div>
 
             {/* LEFT STATS: PERFECTLY INSIDE BRUSH BOXES */}
             {/* MATCHES */}
-            <div className="absolute left-[55px] top-[182px] z-20 pointer-events-none -rotate-6">
+            <div className="absolute left-[55px] top-[175px] z-20 pointer-events-none -rotate-6">
               <span className="text-xl font-black text-white italic tracking-wider drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
-                {matches || "123"}
+                {matches || ""}
               </span>
             </div>
 
             {/* WINS */}
-            <div className="absolute left-[62px] top-[244px] z-20 pointer-events-none -rotate-6">
+            <div className="absolute left-[62px] top-[240px] z-20 pointer-events-none -rotate-6">
               <span className="text-xl font-black text-white italic tracking-wider drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
-                {wins || "50"}
+                {wins || ""}
               </span>
             </div>
 
             {/* DRAWS */}
-            <div className="absolute left-[70px] top-[308px] z-20 pointer-events-none -rotate-6">
+            <div className="absolute left-[70px] top-[300px] z-20 pointer-events-none -rotate-6">
               <span className="text-xl font-black text-white italic tracking-wider drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
-                {draws || "11"}
+                {draws || ""}
               </span>
             </div>
 
             {/* RIGHT STATS: PERFECT CIRCLE & STAR ALIGNMENT */}
             {/* WIN RATE IN CIRCLE CENTER */}
-            <div className="absolute right-[22px] top-[182px] w-[82px] text-center z-20 pointer-events-none">
+            <div className="absolute right-[10px] top-[182px] w-[90px] text-center z-20 pointer-events-none">
               <span className="text-sm font-black text-white tracking-tight drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
-                {winRate || "45.1%"}
+                {winRate || ""}
               </span>
             </div>
 
-            {/* MOTM: EXACTLY ON STAR BRUSH BANNER */}
-            <div className="absolute right-[102px] top-[242px] z-20 pointer-events-none rotate-6">
+            {/* MOTM: EXACTLY ON RIGHT BRUSH BANNER */}
+            <div className="absolute right-[65px] top-[242px] z-20 pointer-events-none rotate-6">
               <span className="text-xl font-black text-white italic tracking-wider drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">
-                {motm || "4"}
+                {motm || ""}
               </span>
             </div>
 
