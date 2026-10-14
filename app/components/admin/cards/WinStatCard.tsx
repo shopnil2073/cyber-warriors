@@ -193,7 +193,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">PLAYER NAME</label>
               <input
                 type="text"
-                placeholder="e.g. SIAM HOSSAIN"
+                placeholder=""
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -239,7 +239,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">MATCHES</label>
               <input
                 type="number"
-                placeholder="123"
+                placeholder=""
                 value={matches}
                 onChange={(e) => setMatches(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -250,7 +250,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">WINS</label>
               <input
                 type="number"
-                placeholder="50"
+                placeholder=""
                 value={wins}
                 onChange={(e) => setWins(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -261,7 +261,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">DRAWS</label>
               <input
                 type="number"
-                placeholder="11"
+                placeholder=""
                 value={draws}
                 onChange={(e) => setDraws(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -274,7 +274,7 @@ export default function WinStatCard() {
               </div>
               <input
                 type="text"
-                placeholder="45.1%"
+                placeholder=""
                 value={winRate}
                 onChange={(e) => {
                   setIsManualWinRate(true);
@@ -290,7 +290,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">MAN OF THE MATCH (MOTM)</label>
               <input
                 type="text"
-                placeholder="4"
+                placeholder=""
                 value={motm}
                 onChange={(e) => setMotm(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -301,7 +301,7 @@ export default function WinStatCard() {
               <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">LOCATION / DISTRICT</label>
               <input
                 type="text"
-                placeholder="e.g. TANGAIL"
+                placeholder=""
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37]"
@@ -571,7 +571,7 @@ export default function WinStatCard() {
             </div>
 
             {/* CENTER PLAYER CUTOUT PHOTO */}
-            <div className="absolute left-[12%] right-[12%] bottom-[60px] top-[100px] flex items-end justify-center z-10 overflow-hidden">
+            <div className="absolute left-[12%] right-[12%] bottom-[80px] top-[100px] flex items-end justify-center z-10 overflow-hidden">
               {playerImage ? (
                 <img
                   src={playerImage}

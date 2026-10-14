@@ -414,7 +414,7 @@ export default function BirthdayCard() {
             </div>
 
             {/* BOTTOM CENTER: PLAYER NAME OVER GOLDEN BRUSH STROKE */}
-            <div className="absolute left-0 right-0 bottom-[115px] z-20 pointer-events-none text-center px-4">
+            <div className="absolute left-0 right-0 bottom-[100px] z-20 pointer-events-none text-center px-4">
               <h2 className="text-3xl font-black italic uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-[#FFF0B3] to-[#D4AF37] drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
                 {playerName || ""}
               </h2>

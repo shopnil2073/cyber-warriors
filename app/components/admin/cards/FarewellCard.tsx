@@ -461,7 +461,7 @@ export default function FarewellCard() {
             onTouchEnd={handleMouseUp}
           >
             {/* CENTER PLAYER CUTOUT PHOTO */}
-            <div className="absolute left-[10%] right-[10%] bottom-[80px] top-[120px] flex items-end justify-center z-10 overflow-hidden">
+            <div className="absolute left-[10%] right-[10%] bottom-[100px] top-[120px] flex items-end justify-center z-10 overflow-hidden">
               {playerImage ? (
                 <img
                   src={playerImage}
@@ -491,7 +491,7 @@ export default function FarewellCard() {
                 Thank You,
               </p>
               <h2 className="text-xl font-black italic uppercase text-white tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] mt-1">
-                {playerName || "TANBIR SHAD"}
+                {playerName || ""}
               </h2>
             </div>
 

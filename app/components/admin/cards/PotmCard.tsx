@@ -176,7 +176,7 @@ export default function PotmCard() {
             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">MONTH</label>
             <input
               type="text"
-              placeholder="e.g. OCTOBER"
+              placeholder=""
               value={month}
               onChange={(e) => setMonth(e.target.value)}
               className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37] transition-all"
@@ -401,7 +401,7 @@ export default function PotmCard() {
             onTouchEnd={handleMouseUp}
           >
             {/* DRAGGABLE & SCALABLE CUTOUT IMAGE WITH COLOR OUTLINE & BRIGHTNESS */}
-            <div className="absolute left-0 bottom-0 top-0 w-[60%] flex items-end justify-center z-10 overflow-hidden">
+            <div className="absolute left-0 bottom-0 top-0 w-[57%] flex items-end justify-center z-10 overflow-hidden">
               {playerImage ? (
                 <img
                   src={playerImage}
