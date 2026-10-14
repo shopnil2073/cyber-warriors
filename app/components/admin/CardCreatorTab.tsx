@@ -4,18 +4,20 @@ import React, { useState } from "react";
 import PotmCard from "./cards/PotmCard";
 import WinStatCard from "./cards/WinStatCard";
 import FarewellCard from "./cards/FarewellCard";
+import BirthdayCard from "./cards/BirthdayCard"; // 👈 1. Import BirthdayCard
 
 export default function CardCreatorTab() {
-  const [subTab, setSubTab] = useState<"potm" | "win" | "farewell">("potm");
+  const [subTab, setSubTab] = useState<"potm" | "win" | "farewell" | "birthday">("potm");
 
   return (
     <div className="space-y-6">
-      {/* 3 CATEGORIES SUB-NAVIGATION */}
+      {/* 4 CATEGORIES SUB-NAVIGATION */}
       <div className="flex flex-wrap gap-2 border-b border-[#23293A] pb-4">
         {[
           { id: "potm", label: "🌟 PLAYER OF THE MONTH" },
           { id: "win", label: "🏆 WIN/GOAL STAT CARD" },
           { id: "farewell", label: "👑 FAREWELL CARD" },
+          { id: "birthday", label: "🎂 BIRTHDAY CARD" }, // 👈 2. Add Button
         ].map((tab) => (
           <button
             key={tab.id}
@@ -35,6 +37,7 @@ export default function CardCreatorTab() {
       {subTab === "potm" && <PotmCard />}
       {subTab === "win" && <WinStatCard />}
       {subTab === "farewell" && <FarewellCard />}
+      {subTab === "birthday" && <BirthdayCard />} {/* 👈 3. Render Component */}
     </div>
   );
 }
