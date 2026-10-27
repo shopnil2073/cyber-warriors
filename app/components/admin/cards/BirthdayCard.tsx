@@ -389,7 +389,7 @@ export default function BirthdayCard() {
             onTouchEnd={handleMouseUp}
           >
             {/* CENTER PLAYER CUTOUT PHOTO */}
-            <div className="absolute left-[10%] right-[10%] bottom-[210x] top-[120px] flex items-end justify-center z-10 overflow-hidden">
+            <div className="absolute left-[10%] right-[10%] bottom-[210x] top-[120px] flex items-end justify-center z-10 overflow-hidden pointer-events-none">
               {playerImage ? (
                 <img
                   src={playerImage}

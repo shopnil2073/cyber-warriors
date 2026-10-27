@@ -5,11 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   getActiveUser,
   updateActiveUserProfile,
-  logoutPlayer,
+  logoutUser,
   getAllUsers,
   UserProfile,
   EMPTY_USER,
-} from "../utils/userStore";
+} from "../../utils/userStore";
 
 import HeaderSection from "./components/HeaderSection";
 import TabNavigation from "./components/TabNavigation";
@@ -122,7 +122,7 @@ function ProfileContent({ overrideUser }: { overrideUser?: UserProfile | null })
   };
 
   const handleLogout = () => {
-    logoutPlayer();
+    logoutUser();
     window.dispatchEvent(new Event("cw_auth_change"));
     setCurrentUser(null);
     router.push("/sign-in");
@@ -239,7 +239,6 @@ function ProfileContent({ overrideUser }: { overrideUser?: UserProfile | null })
     { name: "Unstoppable", icon: "⚡", desc: "Reach 5 Win Streak", category: "SPECIAL", unlocked: overviewStats.winStreak >= 5 },
   ];
 
-  // Registration / Join Date formatting
   const registrationDate = (currentUser as any).joinedAt || (currentUser as any).registeredAt || (currentUser as any).createdAt;
   const careerStartedFormatted = registrationDate 
     ? new Date(registrationDate).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' })

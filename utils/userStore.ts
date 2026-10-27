@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export interface UserProfile {
   id: string;
@@ -17,6 +17,7 @@ export interface UserProfile {
   discord?: string;
   cobegId?: string;
   status: string;
+  role?: string;
 }
 
 export const EMPTY_USER: UserProfile = {
@@ -35,6 +36,7 @@ export const EMPTY_USER: UserProfile = {
   whatsapp: "",
   discord: "",
   cobegId: "",
+  role: "player",
 };
 
 // 1. New Player Registration
@@ -64,6 +66,7 @@ export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> 
         facebook: newUser.facebook,
         whatsapp: newUser.whatsapp,
         rank_badge: newUser.rank,
+        role: newUser.role || "player",
       },
     ]);
 
@@ -110,6 +113,7 @@ export const loginPlayer = async (email: string, pass: string): Promise<UserProf
       whatsapp: u.whatsapp || "",
       discord: u.discord || "",
       cobegId: u.cobeg_id || "",
+      role: u.role || "admin",
     };
 
     if (typeof window !== "undefined") {
@@ -133,7 +137,15 @@ export const getActiveUser = (): UserProfile | null => {
   }
 };
 
-// 4. Get All Registered Players (Async for Supabase & Fallback to LocalStorage)
+// 4. Logout User (Added both export names for compatibility)
+export const logoutUser = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("cw_active_user");
+  }
+};
+export const logoutPlayer = logoutUser;
+
+// 5. Get All Registered Players
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
     const { data, error } = await supabase.from("players").select("*");
@@ -154,6 +166,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
         whatsapp: u.whatsapp || "",
         discord: u.discord || "",
         cobegId: u.cobeg_id || "",
+        role: u.role || "player",
       }));
     }
   } catch (err) {
@@ -172,7 +185,7 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
   return [];
 };
 
-// 5. Update Profile Data
+// 6. Update Profile Data
 export const updateActiveUserProfile = async (updated: UserProfile): Promise<boolean> => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_active_user", JSON.stringify(updated));
@@ -192,6 +205,7 @@ export const updateActiveUserProfile = async (updated: UserProfile): Promise<boo
         whatsapp: updated.whatsapp,
         discord: updated.discord,
         cobeg_id: updated.cobegId,
+        role: updated.role,
       })
       .eq("email", updated.email);
 
@@ -201,14 +215,7 @@ export const updateActiveUserProfile = async (updated: UserProfile): Promise<boo
     }
     return true;
   } catch (err) {
-    console.error("Update Error:", err);
+    console.error("Update Profile Exception:", err);
     return false;
-  }
-};
-
-// 6. Sign Out Player
-export const logoutPlayer = () => {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("cw_active_user");
   }
 };

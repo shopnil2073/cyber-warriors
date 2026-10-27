@@ -27,7 +27,7 @@ export interface NewsItem {
   slug?: string;
   category: string;
   content: string;
-  date: string;
+  date?: string;
   author?: string;
   imageUrl?: string;
   status?: string;
@@ -93,8 +93,8 @@ export const updatePlayerInfo = (rank: number, newName: string, pts: number) => 
   localStorage.setItem("cw_standings", JSON.stringify(updated));
 };
 
-// --- GLOBAL UN-RESTRICTED PUBLIC CLOUD DB ---
-const GLOBAL_CLOUD_URL = "https://api.myjson.online/v1/records/46d6b88e-f1ed-0bc2-bd4d";
+// --- GLOBAL CLOUD DB CONFIG (JSONBIN / PUBLIC API) ---
+const GLOBAL_CLOUD_URL = "https://api.jsonbin.io/v3/b/66fa19b0e41b4d34e438e89a";
 
 export const getStoredNews = (): NewsItem[] => {
   if (typeof window === "undefined") return [];
@@ -108,10 +108,16 @@ export const getStoredNews = (): NewsItem[] => {
 
 export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
   try {
-    const res = await fetch(GLOBAL_CLOUD_URL, { cache: "no-store" });
+    const res = await fetch(GLOBAL_CLOUD_URL, {
+      method: "GET",
+      headers: {
+        "X-Master-Key": "$2a$10$wKk3x08GZJ.N1jGv8QpX.uA8U3xT2Yj/e1lH5.q4.o1r1iK4i1i1G",
+      },
+      cache: "no-store",
+    });
     if (res.ok) {
       const result = await res.json();
-      const data = result.data || result;
+      const data = result.record || result.data || result;
       if (Array.isArray(data)) {
         if (typeof window !== "undefined") {
           localStorage.setItem("cw_news", JSON.stringify(data));
@@ -125,26 +131,41 @@ export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
   return getStoredNews();
 };
 
-export const saveAllNews = async (newsArray: NewsItem[]) => {
+export const saveAllNews = async (newsArray: NewsItem[]): Promise<boolean> => {
   if (typeof window !== "undefined") {
     localStorage.setItem("cw_news", JSON.stringify(newsArray));
   }
   try {
-    await fetch(GLOBAL_CLOUD_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: newsArray }),
+    const res = await fetch(GLOBAL_CLOUD_URL, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": "$2a$10$wKk3x08GZJ.N1jGv8QpX.uA8U3xT2Yj/e1lH5.q4.o1r1iK4i1i1G",
+      },
+      body: JSON.stringify(newsArray),
     });
+    return res.ok;
   } catch (e) {
     console.error("Cloud news save error:", e);
+    return false;
   }
 };
 
-export const saveNews = async (article: NewsItem) => {
+export const saveNewsToCloud = saveAllNews;
+
+export const saveNews = async (article: NewsItem): Promise<boolean> => {
   const current = await fetchNewsFromCloud();
-  const updated = [article, ...current];
-  await saveAllNews(updated);
+  const updated = [article, ...current.filter((item) => item.id !== article.id)];
+  return await saveAllNews(updated);
 };
+
+export const deleteNewsFromCloud = async (id: string): Promise<boolean> => {
+  const current = await fetchNewsFromCloud();
+  const updated = current.filter((item) => item.id !== id);
+  return await saveAllNews(updated);
+};
+
+export const deleteNews = deleteNewsFromCloud;
 
 // --- TICKER STORE ---
 export const getStoredTicker = (): string => {

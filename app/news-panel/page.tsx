@@ -1,46 +1,49 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { getActiveUser } from "../utils/userStore";
-import { getStoredNews, saveAllNews, fetchNewsFromCloud, NewsItem } from "../utils/tournamentStore";
+import React, { useState, useEffect } from 'react';
+import {
+  fetchNewsFromCloud,
+  saveNews,
+  deleteNewsFromCloud,
+  NewsItem,
+} from '../../utils/tournamentStore';
+import { getActiveUser } from '../../utils/userStore';
 
 export default function NewsPanel() {
-  const [activeTab, setActiveTab] = useState<"add" | "manage">("add");
+  const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
   const [articles, setArticles] = useState<NewsItem[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
 
   // Form States
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [content, setContent] = useState("");
-  const [category, setCategory] = useState<string>("ANNOUNCEMENT");
-  const [status, setStatus] = useState<string>("Published");
-  const [imageUrl, setImageUrl] = useState("");
-  const [authorName, setAuthorName] = useState("CYBER WARRIORS ADMIN");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState('ANNOUNCEMENT');
+  const [status, setStatus] = useState('Published');
+  const [image, setImage] = useState('');
 
-  const loadArticles = async () => {
-    const data = await fetchNewsFromCloud();
-    setArticles(data);
-  };
+  const activeUser = getActiveUser();
 
   useEffect(() => {
-    const user = getActiveUser();
-    if (user && user.name) {
-      setAuthorName(user.name.toUpperCase());
-    }
-
-    loadArticles();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    const cloudData = await fetchNewsFromCloud();
+    setArticles(cloudData);
+    setLoading(false);
+  };
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
     if (!editingId) {
       const generatedSlug = val
         .toLowerCase()
-        .replace(/[^a-z0-9 -]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
       setSlug(generatedSlug);
     }
   };
@@ -50,7 +53,7 @@ export default function NewsPanel() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageUrl(reader.result as string);
+        setImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -58,312 +61,282 @@ export default function NewsPanel() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !content) return alert("Please fill in Title and Content!");
-
-    setSaving(true);
-
-    const formattedDate = new Date().toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).toUpperCase();
-
-    let updatedList: NewsItem[] = [];
-
-    if (editingId) {
-      updatedList = articles.map((art) =>
-        art.id === editingId
-          ? {
-              ...art,
-              title,
-              slug,
-              content,
-              category,
-              status,
-              imageUrl,
-              updatedAt: formattedDate,
-            }
-          : art
-      );
-    } else {
-      const newArticle: NewsItem = {
-        id: "n_" + Date.now(),
-        title,
-        slug: slug || "news-" + Date.now(),
-        content,
-        category,
-        status,
-        author: authorName,
-        imageUrl,
-        date: formattedDate,
-        createdAt: formattedDate,
-        updatedAt: formattedDate,
-      };
-      updatedList = [newArticle, ...articles];
+    if (!title || !content) {
+      alert('Please fill out Headline and Content!');
+      return;
     }
 
-    // Save locally and sync to global Cloud DB
-    setArticles(updatedList);
-    await saveAllNews(updatedList);
+    setSaving(true);
+    const newArticle: NewsItem = {
+      id: editingId || `art_${Date.now()}`,
+      title,
+      slug: slug || `news-${Date.now()}`,
+      content,
+      category,
+      status,
+      imageUrl: image,
+      author: activeUser?.name || 'SIAM HOSSAIN',
+      createdAt: new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+      updatedAt: new Date().toISOString(),
+    };
 
+    await saveNews(newArticle);
+    await loadData();
+
+    // Reset Form
+    setEditingId(null);
+    setTitle('');
+    setSlug('');
+    setContent('');
+    setImage('');
+    setCategory('ANNOUNCEMENT');
+    setStatus('Published');
     setSaving(false);
-    alert(editingId ? "Article Updated & Published Globally!" : "Article Published Globally!");
-    resetForm();
-    setActiveTab("manage");
+
+    alert('Article Published & Synced Globally!');
+    setActiveTab('manage');
   };
 
   const handleEdit = (art: NewsItem) => {
     setEditingId(art.id);
     setTitle(art.title);
-    setSlug(art.slug || "");
+    setSlug(art.slug || '');
     setContent(art.content);
-    setCategory(art.category || "ANNOUNCEMENT");
-    setStatus(art.status || "Published");
-    setImageUrl(art.imageUrl || "");
-    setActiveTab("add");
+    setCategory(art.category);
+    setStatus(art.status || 'Published');
+    setImage(art.imageUrl || '');
+    setActiveTab('add');
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this article globally?")) {
+    if (confirm('Are you sure you want to delete this article globally?')) {
       setSaving(true);
-      const filtered = articles.filter((a) => a.id !== id);
-      setArticles(filtered);
-      await saveAllNews(filtered);
+      await deleteNewsFromCloud(id);
+      await loadData();
       setSaving(false);
-      alert("Article deleted globally!");
+      alert('Article deleted globally!');
     }
   };
 
-  const resetForm = () => {
-    setEditingId(null);
-    setTitle("");
-    setSlug("");
-    setContent("");
-    setCategory("ANNOUNCEMENT");
-    setStatus("Published");
-    setImageUrl("");
-  };
-
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-white p-4 md:p-8 pb-20 font-sans">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
+    <div className="min-h-screen bg-[#0a0e17] text-white p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center bg-[#121624] border border-[#23293A] p-4 rounded-xl shadow-md">
+        <div className="flex justify-between items-center border-b border-[#1f293d] pb-4 mb-6">
           <div>
-            <h1 className="text-xl font-black text-[#D4AF37] uppercase tracking-wider">
+            <h1 className="text-xl md:text-2xl font-black text-amber-400 tracking-wider uppercase">
               NEWS MANAGEMENT
             </h1>
-            <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-              AUTHOR: {authorName}
+            <p className="text-xs text-gray-400 font-mono">
+              AUTHOR: {activeUser?.name || 'SIAM HOSSAIN'}
             </p>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 border-b border-[#23293A] pb-3">
+        {/* Action Tabs */}
+        <div className="flex gap-4 mb-8">
           <button
-            onClick={() => {
-              resetForm();
-              setActiveTab("add");
-            }}
-            className={`text-xs font-extrabold px-5 py-2.5 rounded-lg transition-all cursor-pointer uppercase ${
-              activeTab === "add"
-                ? "bg-[#D4AF37] text-black shadow-md"
-                : "bg-[#121624] text-gray-400 hover:text-white"
+            onClick={() => setActiveTab('add')}
+            className={`px-5 py-2.5 text-xs font-bold uppercase rounded-lg border transition-all ${
+              activeTab === 'add'
+                ? 'bg-amber-500 text-black border-amber-500 font-extrabold shadow-lg shadow-amber-500/20'
+                : 'bg-[#121927] text-gray-400 border-[#1f293d] hover:text-white'
             }`}
           >
-            {editingId ? "✏️ EDIT ARTICLE" : "➕ ADD ARTICLE"}
+            + ADD ARTICLE
           </button>
           <button
-            onClick={() => setActiveTab("manage")}
-            className={`text-xs font-extrabold px-5 py-2.5 rounded-lg transition-all cursor-pointer uppercase ${
-              activeTab === "manage"
-                ? "bg-[#D4AF37] text-black shadow-md"
-                : "bg-[#121624] text-gray-400 hover:text-white"
+            onClick={() => setActiveTab('manage')}
+            className={`px-5 py-2.5 text-xs font-bold uppercase rounded-lg border transition-all ${
+              activeTab === 'manage'
+                ? 'bg-amber-500 text-black border-amber-500 font-extrabold shadow-lg shadow-amber-500/20'
+                : 'bg-[#121927] text-gray-400 border-[#1f293d] hover:text-white'
             }`}
           >
             📋 MANAGE ARTICLES ({articles.length})
           </button>
         </div>
 
-        {/* TAB 1: ADD / EDIT */}
-        {activeTab === "add" && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-[#121624] border border-[#23293A] rounded-xl p-6 shadow-md space-y-4">
-              <h2 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">
-                {editingId ? "EDIT EXISTING ARTICLE" : "CREATE NEW ARTICLE"}
-              </h2>
+        {/* Tab 1: Create/Edit Article */}
+        {activeTab === 'add' && (
+          <form
+            onSubmit={handleSubmit}
+            className="bg-[#121927] border border-[#1f293d] rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl"
+          >
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-[#1f293d] pb-2">
+              {editingId ? 'EDIT ARTICLE' : 'CREATE NEW ARTICLE'}
+            </h2>
 
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                HEADLINE / TITLE
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="ENTER AN ENGAGING HEADLINE"
+                className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                URL SLUG
+              </label>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="article-url-slug"
+                className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-amber-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                ARTICLE CONTENT
+              </label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={6}
+                placeholder="Write full news article details here..."
+                className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl p-4 text-sm text-white focus:outline-none focus:border-amber-500 leading-relaxed"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                  Headline / Title
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                  CATEGORY
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ENTER AN ENGAGING HEADLINE"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-sm rounded-lg text-white focus:border-[#D4AF37] outline-none uppercase font-bold"
-                />
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="ANNOUNCEMENT">Announcement</option>
+                  <option value="MATCH REPORT">Match Report</option>
+                  <option value="TOP PERFORMER">Top Performer</option>
+                  <option value="TOURNAMENT UPDATE">Tournament Update</option>
+                  <option value="TRANSFER">Transfer</option>
+                </select>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                  URL Slug
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                  STATUS
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="article-url-slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="w-full bg-[#0B0E14] border border-[#23293A] p-2.5 text-xs rounded-lg text-gray-300 font-mono outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                  Article Content
-                </label>
-                <textarea
-                  rows={8}
-                  required
-                  placeholder="Write full news article details here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-lg text-white focus:border-[#D4AF37] outline-none"
-                />
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="Published">Published</option>
+                  <option value="Draft">Draft</option>
+                </select>
               </div>
             </div>
 
-            <div className="bg-[#121624] border border-[#23293A] rounded-xl p-6 shadow-md space-y-4">
-              <h2 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest">
-                PUBLISH SETTINGS
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-lg text-white outline-none focus:border-[#D4AF37]"
-                  >
-                    <option value="ANNOUNCEMENT">Announcement</option>
-                    <option value="MATCH REPORT">Match Report</option>
-                    <option value="TOP PERFORMER">Top Performer</option>
-                    <option value="TOURNAMENT UPDATE">Tournament Update</option>
-                    <option value="TRANSFER">Transfer</option>
-                  </select>
+            <div>
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                FEATURED IMAGE
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full bg-[#0a0e17] border border-[#1f293d] rounded-xl p-2 text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-black hover:file:bg-amber-400"
+              />
+              {image && (
+                <div className="mt-4 w-40 h-24 border border-slate-700 rounded-lg overflow-hidden">
+                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
                 </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-lg text-white outline-none focus:border-[#D4AF37]"
-                  >
-                    <option value="Published">Published</option>
-                    <option value="Draft">Draft</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-400 uppercase block mb-1">
-                  Featured Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-lg text-gray-400 file:bg-[#121624] file:border-0 file:text-[#D4AF37] file:font-bold file:px-3 file:py-1 file:rounded cursor-pointer"
-                />
-                {imageUrl && (
-                  <div className="mt-3 relative w-32 h-20 rounded-lg overflow-hidden border border-[#D4AF37]">
-                    <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3 rounded-lg hover:brightness-110 transition-all uppercase cursor-pointer disabled:opacity-50"
-              >
-                {saving ? "SYNCING TO GLOBAL CLOUD..." : editingId ? "🚀 UPDATE & PUBLISH GLOBALLY" : "🚀 PUBLISH TO ALL VISITORS"}
-              </button>
+              )}
             </div>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm uppercase py-4 rounded-xl transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
+            >
+              {saving ? 'SYNCING TO CLOUD...' : '🚀 PUBLISH TO ALL VISITORS'}
+            </button>
           </form>
         )}
 
-        {/* TAB 2: MANAGE */}
-        {activeTab === "manage" && (
-          <div className="bg-[#121624] border border-[#23293A] rounded-xl p-4 md:p-6 shadow-md overflow-x-auto">
-            <h2 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest mb-4">
+        {/* Tab 2: Manage Articles */}
+        {activeTab === 'manage' && (
+          <div className="bg-[#121927] border border-[#1f293d] rounded-2xl p-6 md:p-8 shadow-2xl overflow-x-auto">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
               ALL PUBLISHED ARTICLES
             </h2>
 
-            {articles.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No news articles found in cloud DB. Create one from the Add Article tab.</p>
+            {loading ? (
+              <p className="text-amber-400 text-sm font-mono animate-pulse">
+                Fetching cloud database...
+              </p>
+            ) : articles.length === 0 ? (
+              <p className="text-gray-500 text-sm italic">
+                No news articles found in Cloud DB. Create one from the Add Article tab.
+              </p>
             ) : (
-              <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+              <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#23293A] text-gray-400 font-black uppercase text-[10px] tracking-wider">
-                    <th className="py-3 px-2">ID</th>
-                    <th className="py-3 px-2">Title / Slug</th>
-                    <th className="py-3 px-2">Category</th>
-                    <th className="py-3 px-2">Author</th>
-                    <th className="py-3 px-2">Status</th>
-                    <th className="py-3 px-2">Created At</th>
-                    <th className="py-3 px-2 text-right">Actions</th>
+                  <tr className="border-b border-[#1f293d] text-gray-400 uppercase font-mono">
+                    <th className="py-3 px-2">ID / SLUG</th>
+                    <th className="py-3 px-2">TITLE</th>
+                    <th className="py-3 px-2">CATEGORY</th>
+                    <th className="py-3 px-2">AUTHOR</th>
+                    <th className="py-3 px-2">STATUS</th>
+                    <th className="py-3 px-2">CREATED AT</th>
+                    <th className="py-3 px-2 text-center">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#23293A]">
+                <tbody className="divide-y divide-[#1f293d]">
                   {articles.map((art) => (
-                    <tr key={art.id} className="hover:bg-[#1A2035]/50 transition-all">
-                      <td className="py-3 px-2 font-mono text-gray-500 text-[10px]">{art.id.slice(0, 8)}</td>
-                      <td className="py-3 px-2 max-w-[200px]">
-                        <p className="font-bold text-white truncate">{art.title}</p>
-                        <p className="text-[10px] font-mono text-[#D4AF37] truncate">{art.slug || art.id}</p>
+                    <tr key={art.id} className="hover:bg-[#0a0e17]/50">
+                      <td className="py-3 px-2 font-mono text-gray-400">{art.id}</td>
+                      <td className="py-3 px-2 font-bold text-white max-w-xs truncate">
+                        {art.title}
                       </td>
                       <td className="py-3 px-2">
-                        <span className="bg-[#0B0E14] border border-[#23293A] text-[#D4AF37] px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                          {art.category || "ANNOUNCEMENT"}
+                        <span className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded font-bold uppercase border border-amber-500/20">
+                          {art.category}
                         </span>
                       </td>
-                      <td className="py-3 px-2 font-bold text-gray-300">{art.author || "ADMIN"}</td>
+                      <td className="py-3 px-2 text-gray-300">{art.author || 'ADMIN'}</td>
                       <td className="py-3 px-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            art.status === "Draft"
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                          className={`px-2 py-1 rounded font-bold uppercase ${
+                            art.status === 'Published'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
                           }`}
                         >
-                          {art.status || "Published"}
+                          {art.status || 'Published'}
                         </span>
                       </td>
-                      <td className="py-3 px-2 text-[10px] text-gray-400">{art.date || art.createdAt}</td>
-                      <td className="py-3 px-2 text-right space-x-2">
+                      <td className="py-3 px-2 text-gray-400 font-mono">{art.createdAt}</td>
+                      <td className="py-3 px-2 text-center space-x-2">
                         <button
                           onClick={() => handleEdit(art)}
-                          className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-1 rounded font-bold hover:bg-[#D4AF37]/20 uppercase cursor-pointer"
+                          className="px-3 py-1 bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black font-bold rounded transition-all"
                         >
-                          Edit
+                          EDIT
                         </button>
                         <button
                           onClick={() => handleDelete(art.id)}
-                          className="bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-1 rounded font-bold hover:bg-red-500/20 uppercase cursor-pointer"
+                          className="px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white font-bold rounded transition-all"
                         >
-                          Delete
+                          DELETE
                         </button>
                       </td>
                     </tr>
@@ -373,7 +346,6 @@ export default function NewsPanel() {
             )}
           </div>
         )}
-
       </div>
     </div>
   );

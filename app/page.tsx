@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { getStoredTicker } from "./utils/tournamentStore";
-import { getAllUsers, UserProfile } from "./utils/userStore";
+import { getStoredTicker, fetchNewsFromCloud, NewsItem } from "../utils/tournamentStore";
+import { getAllUsers, UserProfile } from "../utils/userStore";
 
 export default function Home() {
   const taglineText = "Driven by Passion. Defined by Glory.";
@@ -20,6 +20,10 @@ export default function Home() {
   const [dbPlayers, setDbPlayers] = useState<UserProfile[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState<boolean>(true);
 
+  // Dynamic Cloud News State
+  const [cloudNews, setCloudNews] = useState<NewsItem[]>([]);
+  const [loadingNews, setLoadingNews] = useState<boolean>(true);
+
   // Random 2 Players State for SOLO UPCOMING Section
   const [soloPlayer1, setSoloPlayer1] = useState<UserProfile | null>(null);
   const [soloPlayer2, setSoloPlayer2] = useState<UserProfile | null>(null);
@@ -29,9 +33,9 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     fetchRegisteredPlayers();
+    loadDynamicNews();
   }, []);
 
-  // Fetch real registered players from userStore/Database
   const fetchRegisteredPlayers = async () => {
     try {
       setLoadingPlayers(true);
@@ -39,7 +43,6 @@ export default function Home() {
       if (players && Array.isArray(players) && players.length > 0) {
         setDbPlayers(players);
 
-        // Pick 2 Random Players for SOLO UPCOMING Section
         if (players.length >= 2) {
           const randomIndex1 = Math.floor(Math.random() * players.length);
           let randomIndex2 = Math.floor(Math.random() * players.length);
@@ -60,56 +63,34 @@ export default function Home() {
     }
   };
 
+  const loadDynamicNews = async () => {
+    try {
+      setLoadingNews(true);
+      const newsData = await fetchNewsFromCloud();
+      const published = newsData.filter((item) => item.status !== "Draft");
+      setCloudNews(published);
+    } catch (err) {
+      console.error("Error loading cloud news:", err);
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
   const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
 
-  // Dynamic HQ News Articles linked with registered database players' avatars
-  const newsItems = [
-    {
-      id: 1,
-      title: "ANUPAM SATTER TURZO JOINS CYBER WARRIORS AS NEW CAPTAIN",
-      image: dbPlayers[0]?.avatar || "/logo.jpg",
-      userId: dbPlayers[0]?.id || "",
-    },
-    {
-      id: 2,
-      title: "CYBER WARRIORS STRENGTHENS MAIN ROSTER WITH NEW ADDITIONS",
-      image: dbPlayers[1]?.avatar || "/logo.jpg",
-      userId: dbPlayers[1]?.id || "",
-    },
-    {
-      id: 3,
-      title: "THE ROYAL CLUB ACADEMY OFFICIALLY WELCOMES FIVE NEW PLAYERS",
-      image: dbPlayers[2]?.avatar || "/logo.jpg",
-      userId: dbPlayers[2]?.id || "",
-    },
-    {
-      id: 4,
-      title: "CYBER WARRIORS MATCH RULES & REGULATIONS UPDATE",
-      image: dbPlayers[3]?.avatar || "/logo.jpg",
-      userId: dbPlayers[3]?.id || "",
-    },
-    {
-      id: 5,
-      title: "CW TRAINING DRILL & ACADEMY MATCHES ANNOUNCED",
-      image: dbPlayers[4]?.avatar || dbPlayers[0]?.avatar || "/logo.jpg",
-      userId: dbPlayers[4]?.id || dbPlayers[0]?.id || "",
-    },
-  ];
-
-  // Auto Slider Timer (3 Seconds)
   useEffect(() => {
+    if (cloudNews.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % newsItems.length);
+      setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % cloudNews.length);
     }, 3000);
     return () => clearInterval(timer);
-  }, [newsItems.length]);
+  }, [cloudNews.length]);
 
   useEffect(() => {
     const activeTicker = getStoredTicker();
     if (activeTicker) setTicker(activeTicker);
   }, []);
 
-  // Tagline Typing Effect
   useEffect(() => {
     const handleTyping = () => {
       if (!isDeleting) {
@@ -131,14 +112,12 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [displayText, isDeleting]);
 
-  // Sort Registered Players for Elite Ranking (Sorted by Rating/OVR)
   const rankedPlayers = [...dbPlayers].sort((a: any, b: any) => {
     const rateA = Number(a.ovrRating || a.rating || 0);
     const rateB = Number(b.ovrRating || b.rating || 0);
     return rateB - rateA;
   });
 
-  // Sort Registered Players for Top Scorers (Sorted by Goals)
   const topScorers = [...dbPlayers].sort((a: any, b: any) => {
     const goalsA = Number(a.totalGoals || a.goals || a.scored || 0);
     const goalsB = Number(b.totalGoals || b.goals || b.scored || 0);
@@ -152,9 +131,9 @@ export default function Home() {
   const otherTopScorers: any[] = topScorers.slice(1, 5);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 selection:bg-[#D4AF37] selection:text-black">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 selection:bg-[#D4AF37] selection:text-black font-sans">
       
-      {/* Dynamic Announcement Ticker */}
+      {/* Ticker */}
       <div className="bg-[var(--bg-card)] border-b border-[var(--border-color)] py-1.5 px-4 transition-colors">
         <div className="flex items-center gap-3 max-w-7xl mx-auto">
           <span className="bg-gradient-to-r from-[#AA7C11] to-[#D4AF37] text-black text-[10px] font-black px-2 py-0.5 rounded tracking-widest uppercase animate-pulse shrink-0">
@@ -190,7 +169,6 @@ export default function Home() {
             CYBER <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#AA7C11]">WARRIORS</span>
           </h1>
 
-          {/* Typing Tagline */}
           <div className="h-8 flex items-center justify-center mt-2">
             <blockquote className="text-sm md:text-lg italic font-serif text-[var(--text-muted)] tracking-wide">
               "{displayText}"
@@ -198,7 +176,6 @@ export default function Home() {
             </blockquote>
           </div>
 
-          {/* Quick Action Buttons */}
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link
               href="/event"
@@ -216,10 +193,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Main Content Sections Container */}
+      {/* Main Content Sections */}
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
 
-        {/* 1. HQ NEWS SECTION (AUTOMATIC SLIDE SHOW WITH DATABASE REGISTERED USER PHOTOS) */}
+        {/* 1. HQ NEWS SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors overflow-hidden">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2">
@@ -236,53 +213,76 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Auto Sliding Container with Registered Database Users Pictures */}
           <div className="relative w-full overflow-hidden rounded-2xl">
-            <div
-              className="flex transition-transform duration-700 ease-in-out gap-4"
-              style={{
-                transform: `translateX(-${currentNewsIndex * 260}px)`,
-              }}
-            >
-              {newsItems.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.userId ? `/profile?id=${item.userId}` : "/news"}
-                  className="shrink-0 w-[240px] md:w-[280px] h-[160px] md:h-[180px] relative rounded-2xl overflow-hidden border-2 border-[var(--border-color)] hover:border-[#D4AF37] group transition-all duration-300 shadow-lg cursor-pointer bg-black/50"
+            {loadingNews ? (
+              <div className="py-12 text-center text-xs font-mono text-[#D4AF37] animate-pulse uppercase">
+                Loading Latest Cloud News...
+              </div>
+            ) : cloudNews.length === 0 ? (
+              <div className="py-10 text-center text-xs font-bold text-[var(--text-muted)] uppercase">
+                No news articles published yet.
+              </div>
+            ) : (
+              <>
+                <div
+                  className="flex transition-transform duration-700 ease-in-out gap-4"
+                  style={{
+                    transform: `translateX(-${currentNewsIndex * 260}px)`,
+                  }}
                 >
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-4">
-                    <h3 className="font-extrabold text-xs md:text-sm text-white group-hover:text-[#D4AF37] transition-colors uppercase tracking-wide leading-snug line-clamp-2">
-                      {item.title}
-                    </h3>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  {cloudNews.map((item) => {
+                    const targetUrl = `/news/${item.slug || item.id}`;
+                    return (
+                      <a
+                        key={item.id}
+                        href={targetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 w-[240px] md:w-[280px] h-[160px] md:h-[180px] relative rounded-2xl overflow-hidden border-2 border-[var(--border-color)] hover:border-[#D4AF37] group transition-all duration-300 shadow-lg cursor-pointer bg-black/50 block"
+                      >
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-bold bg-slate-900">
+                            CYBER WARRIORS
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-4">
+                          <span className="text-[9px] font-extrabold text-[#D4AF37] uppercase tracking-wider mb-1">
+                            {item.category}
+                          </span>
+                          <h3 className="font-extrabold text-xs md:text-sm text-white group-hover:text-[#D4AF37] transition-colors uppercase tracking-wide leading-snug line-clamp-2">
+                            {item.title}
+                          </h3>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
 
-            {/* Slide Navigation Dots */}
-            <div className="flex justify-center gap-1.5 mt-4">
-              {newsItems.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentNewsIndex(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    currentNewsIndex === idx
-                      ? "bg-[#D4AF37] w-5"
-                      : "bg-gray-600 hover:bg-gray-400 w-2"
-                  }`}
-                />
-              ))}
-            </div>
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {cloudNews.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentNewsIndex(idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        currentNewsIndex === idx
+                          ? "bg-[#D4AF37] w-5"
+                          : "bg-gray-600 hover:bg-gray-400 w-2"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </section>
 
-        {/* 2. ELITE RANKING SECTION (DYNAMIC DATABASE PLAYERS ONLY WITH PROFILE NAVIGATION) */}
+        {/* 2. ELITE RANKING SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -299,7 +299,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Filter Tabs */}
           <div className="flex gap-2 mb-6 border-b border-[var(--border-color)] pb-3">
             {(["OVERALL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
               <button
@@ -326,11 +325,10 @@ export default function Home() {
             </div>
           ) : (
             <div>
-              {/* Rank 1 Highlight Card (Navigates to profile) */}
               {rank1Player && (
                 <Link
                   href={`/profile?id=${rank1Player.id}`}
-                  className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 block cursor-pointer group"
+                  className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 cursor-pointer group block"
                 >
                   <div className="flex items-center gap-3 w-full md:w-auto">
                     <div className="relative shrink-0">
@@ -363,7 +361,6 @@ export default function Home() {
                 </Link>
               )}
 
-              {/* Stats Bar for Rank 1 */}
               {rank1Player && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs font-bold bg-[var(--bg-main)] p-3 rounded-xl border border-[var(--border-color)] mb-6 font-mono">
                   <div>👕 {rank1Player.matches || 0} APP</div>
@@ -374,7 +371,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Ranking List (#2 to #5 Navigates to profile) */}
               <div className="space-y-2">
                 {otherRankedPlayers.map((player, idx) => (
                   <Link
@@ -415,7 +411,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* 3. TOP SCORERS SECTION (DYNAMIC PROFILE NAVIGATION) */}
+        {/* 3. TOP SCORERS SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -434,10 +430,9 @@ export default function Home() {
 
           {topScorer1Player ? (
             <div>
-              {/* Golden Boot #1 Scorer Card */}
               <Link
                 href={`/profile?id=${topScorer1Player.id}`}
-                className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex items-center justify-between shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 block cursor-pointer group"
+                className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex items-center justify-between shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 cursor-pointer group block"
               >
                 <div className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shrink-0 group-hover:scale-105 transition-transform">
@@ -473,7 +468,6 @@ export default function Home() {
                 </div>
               </Link>
 
-              {/* Other Top Scorers #2 to #5 */}
               <div className="space-y-2">
                 {otherTopScorers.map((scorer, idx) => (
                   <Link
@@ -516,7 +510,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* 4. SOLO UPCOMING SECTION (DYNAMIC PROFILE NAVIGATION FOR MATCH PLAYERS) */}
+        {/* 4. SOLO UPCOMING SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-2">
@@ -553,7 +547,6 @@ export default function Home() {
               </div>
             ) : soloPlayer1 && soloPlayer2 ? (
               <div className="flex items-center justify-around py-4">
-                {/* Player 1 Profile Link */}
                 <Link
                   href={`/profile?id=${soloPlayer1.id}`}
                   className="flex flex-col items-center gap-2 group cursor-pointer"
@@ -575,7 +568,6 @@ export default function Home() {
                   VS
                 </div>
 
-                {/* Player 2 Profile Link */}
                 <Link
                   href={`/profile?id=${soloPlayer2.id}`}
                   className="flex flex-col items-center gap-2 group cursor-pointer"

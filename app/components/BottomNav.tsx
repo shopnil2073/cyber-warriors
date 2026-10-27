@@ -4,8 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { getActiveUser, UserProfile } from "../utils/userStore";
-
+import { getActiveUser, UserProfile } from "../../utils/userStore";
 export default function BottomNav() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);

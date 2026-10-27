@@ -1,67 +1,59 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchNewsFromCloud, getStoredNews, NewsItem } from "../utils/tournamentStore";
+import { fetchNewsFromCloud, NewsItem } from "../../utils/tournamentStore";
 
 export default function NewsPage() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [loading, setLoading] = useState<boolean>(true);
-
-  const loadData = async () => {
-    // Local read
-    const local = getStoredNews();
-    if (local.length > 0) {
-      setNewsList(local.filter((i) => !i.status || i.status === "Published"));
-      setLoading(false);
-    }
-
-    // Cloud Live Read (for guest, incognito & all accounts)
-    const cloud = await fetchNewsFromCloud();
-    if (cloud.length > 0) {
-      setNewsList(cloud.filter((i) => !i.status || i.status === "Published"));
-    }
-    setLoading(false);
-  };
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
   useEffect(() => {
-    loadData();
+    async function loadNews() {
+      try {
+        setLoading(true);
+        const data = await fetchNewsFromCloud();
+        const published = data.filter((item) => item.status !== "Draft");
+        setNewsList(published);
+      } catch (err) {
+        console.error("Error fetching news:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadNews();
   }, []);
 
-  const filteredNews =
-    selectedCategory === "ALL"
-      ? newsList
-      : newsList.filter(
-          (item) => (item.category || "").toUpperCase().trim() === selectedCategory.toUpperCase().trim()
-        );
+  const categories = ["ALL", "ANNOUNCEMENT", "TRANSFER", "TOURNAMENT", "ACADEMY", "RULES"];
+
+  const filteredNews = selectedCategory === "ALL" 
+    ? newsList 
+    : newsList.filter((item) => item.category?.toUpperCase() === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 md:p-8 pb-20 font-sans">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Header Title */}
-        <div className="text-center space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">
-            CYBER WARRIORS OFFICIAL PRESS & NEWS
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <span className="text-[#D4AF37] text-xs font-black tracking-widest uppercase border border-[#D4AF37]/30 px-3 py-1 rounded-full bg-[#D4AF37]/10">
+            CYBER WARRIORS HQ
           </span>
-          <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider">
-            NEWS & ANNOUNCEMENTS
+          <h1 className="text-3xl md:text-5xl font-extrabold uppercase tracking-tight text-white">
+            OFFICIAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]">NEWS & ANNOUNCEMENTS</span>
           </h1>
-          <p className="text-xs font-semibold text-[var(--text-muted)]">
-            টুর্নামেন্টের সর্বশেষ আপডেট, ম্যাচ রিপোর্ট, প্লেয়ার ট্রান্সফার ও অফিসিয়াল নোটিশ
-          </p>
         </div>
 
         {/* Category Filters */}
-        <div className="flex overflow-x-auto gap-2 border-b border-[var(--border-color)] pb-3 scrollbar-none">
-          {["ALL", "ANNOUNCEMENT", "MATCH REPORT", "TOP PERFORMER", "TOURNAMENT UPDATE", "TRANSFER"].map((cat) => (
+        <div className="flex flex-wrap justify-center gap-2 border-b border-[var(--border-color)] pb-6">
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`text-xs font-extrabold px-4 py-2 rounded-lg whitespace-nowrap transition-all cursor-pointer uppercase ${
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
                 selectedCategory === cat
-                  ? "bg-[#D4AF37] text-black shadow-md"
-                  : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-white"
+                  ? "bg-[#D4AF37] text-black shadow-lg scale-105"
+                  : "bg-[var(--bg-card)] text-gray-400 border border-[var(--border-color)] hover:text-white hover:border-[#D4AF37]"
               }`}
             >
               {cat}
@@ -69,74 +61,66 @@ export default function NewsPage() {
           ))}
         </div>
 
-        {/* News Cards List */}
-        <div className="space-y-4">
-          {loading && newsList.length === 0 ? (
-            <div className="text-center py-12 text-xs font-mono text-[#D4AF37] animate-pulse">
-              LOADING LATEST NEWS FROM SERVER...
-            </div>
-          ) : filteredNews.length === 0 ? (
-            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-8 text-center text-xs text-[var(--text-muted)] italic">
-              এই ক্যাটাগরিতে এখনো কোনো খবর প্রকাশিত হয়নি।
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredNews.map((item) => {
-                const slug = item.slug || item.id;
-                // TRC-BD Style Direct Clean URL: https://www.cyber-warriors.xyz/article-slug-name
-                const targetUrl = `/${slug}`;
-
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[#D4AF37]/50 rounded-xl p-4 space-y-3 transition-all flex flex-col justify-between group shadow-md"
-                  >
-                    <div className="space-y-2">
-                      {item.imageUrl && (
-                        <a href={targetUrl}>
-                          <img
-                            src={item.imageUrl}
-                            alt={item.title}
-                            className="w-full h-36 object-cover rounded-lg border border-[var(--border-color)] group-hover:scale-[1.01] transition-all cursor-pointer"
-                          />
-                        </a>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-extrabold text-[#D4AF37] bg-[var(--bg-main)] px-2.5 py-1 rounded border border-[#D4AF37]/30 uppercase">
-                          {item.category || "ANNOUNCEMENT"}
-                        </span>
-                        <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                          📅 {item.date || item.createdAt}
-                        </span>
+        {/* News Grid */}
+        {loading ? (
+          <div className="py-20 text-center font-mono text-[#D4AF37] animate-pulse">
+            LOADING OFFICIAL NEWS...
+          </div>
+        ) : filteredNews.length === 0 ? (
+          <div className="py-20 text-center text-gray-400 font-bold uppercase">
+            No published news found in this category.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredNews.map((item) => {
+              const targetUrl = `/news/${item.slug || item.id}`;
+              return (
+                <a
+                  key={item.id}
+                  href={targetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden hover:border-[#D4AF37] transition-all duration-300 flex flex-col group shadow-xl"
+                >
+                  <div className="relative h-48 w-full bg-slate-900 overflow-hidden">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 font-bold">
+                        CYBER WARRIORS
                       </div>
+                    )}
+                    <span className="absolute top-3 left-3 bg-[#D4AF37] text-black text-[10px] font-black uppercase px-2.5 py-1 rounded">
+                      {item.category}
+                    </span>
+                  </div>
 
-                      <a href={targetUrl}>
-                        <h3 className="text-sm font-extrabold text-white uppercase line-clamp-2 group-hover:text-[#D4AF37] transition-all cursor-pointer">
-                          {item.title}
-                        </h3>
-                      </a>
-
-                      <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                  <div className="p-5 flex flex-col justify-between flex-1 space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-400 font-mono">
+                        {item.createdAt || item.date} • By {item.author || "CW ADMIN"}
+                      </p>
+                      <h3 className="text-base font-bold text-white group-hover:text-[#D4AF37] transition-colors line-clamp-2 leading-snug uppercase">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
                         {item.content}
                       </p>
                     </div>
 
-                    <div className="pt-3 border-t border-[var(--border-color)] flex justify-between items-center text-[10px] text-[var(--text-muted)] font-bold">
-                      <span>By {item.author || "ADMIN"}</span>
-                      <a
-                        href={targetUrl}
-                        className="text-[#D4AF37] hover:underline font-black cursor-pointer"
-                      >
-                        READ FULL NOTICE ›
-                      </a>
+                    <div className="text-xs font-black text-[#D4AF37] uppercase flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      READ FULL ARTICLE <span>→</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
+                </a>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
