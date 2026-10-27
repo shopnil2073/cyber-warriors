@@ -2,7 +2,7 @@ import React from "react";
 import { fetchNewsFromCloud } from "../../../utils/tournamentStore";
 import SingleNewsClient from "./SingleNewsClient";
 
-// Next.js static export error সমাধান করতে ক্লাউডের সব slug জেনারেট করা হচ্ছে
+// Vercel Static Export Safe generateStaticParams
 export async function generateStaticParams() {
   try {
     const allNews = await fetchNewsFromCloud();
@@ -12,11 +12,14 @@ export async function generateStaticParams() {
       }));
     }
   } catch (error) {
-    console.error("Error generating static params:", error);
+    console.error("Error generating static params for build:", error);
   }
 
-  // Fallback for build time
-  return [{ slug: ["welcome"] }];
+  // Fallback slug for Vercel build stability
+  return [
+    { slug: ["welcome"] },
+    { slug: ["announcement"] }
+  ];
 }
 
 export default function SingleNewsPage() {
