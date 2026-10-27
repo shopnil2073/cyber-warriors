@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchNewsFromCloud, NewsItem } from "../../utils/tournamentStore";
 
-export default function NewsPage() {
+export default function NewsPageClient() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
@@ -33,8 +33,6 @@ export default function NewsPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header */}
         <div className="text-center space-y-2">
           <span className="text-[#D4AF37] text-xs font-black tracking-widest uppercase border border-[#D4AF37]/30 px-3 py-1 rounded-full bg-[#D4AF37]/10">
             CYBER WARRIORS HQ
@@ -44,7 +42,6 @@ export default function NewsPage() {
           </h1>
         </div>
 
-        {/* Category Filters */}
         <div className="flex flex-wrap justify-center gap-2 border-b border-[var(--border-color)] pb-6">
           {categories.map((cat) => (
             <button
@@ -61,7 +58,6 @@ export default function NewsPage() {
           ))}
         </div>
 
-        {/* News Grid */}
         {loading ? (
           <div className="py-20 text-center font-mono text-[#D4AF37] animate-pulse">
             LOADING OFFICIAL NEWS...
