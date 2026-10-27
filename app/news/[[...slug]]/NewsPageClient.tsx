@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { fetchNewsFromCloud, NewsItem } from "../../utils/tournamentStore";
+import { fetchNewsFromCloud, NewsItem } from "../../../utils/tournamentStore";
 
 export default function NewsPageClient() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
