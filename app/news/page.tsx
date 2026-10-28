@@ -121,7 +121,7 @@ function NewsPageContent() {
         {/* Header */}
         <div className="text-center space-y-2">
           <span className="text-[#D4AF37] text-xs font-black tracking-widest uppercase border border-[#D4AF37]/30 px-3 py-1 rounded-full bg-[#D4AF37]/10">
-            CYBER WARRIORS HQ
+            CYBER WARRIORS H.Q.
           </span>
           <h1 className="text-3xl md:text-5xl font-extrabold uppercase tracking-tight text-white">
             OFFICIAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]">NEWS & ANNOUNCEMENTS</span>
