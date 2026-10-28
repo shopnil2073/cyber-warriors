@@ -4,6 +4,8 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { fetchNewsFromCloud, NewsItem } from "../../utils/tournamentStore";
 
+export const dynamic = "force-static";
+
 function NewsPageContent() {
   const searchParams = useSearchParams();
   const articleSlug = searchParams.get("article");
@@ -44,7 +46,6 @@ function NewsPageContent() {
     ? newsList 
     : newsList.filter((item) => item.category?.toUpperCase() === selectedCategory);
 
-  // 1. Single Article Detail View (Jokhon URL-e ?article=slug thakbe)
   if (articleSlug) {
     if (loading) {
       return (
@@ -113,12 +114,10 @@ function NewsPageContent() {
     );
   }
 
-  // 2. All News Grid View (Jokhon URL shudhu /news thakbe)
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Header */}
         <div className="text-center space-y-2">
           <span className="text-[#D4AF37] text-xs font-black tracking-widest uppercase border border-[#D4AF37]/30 px-3 py-1 rounded-full bg-[#D4AF37]/10">
             CYBER WARRIORS H.Q.
@@ -128,7 +127,6 @@ function NewsPageContent() {
           </h1>
         </div>
 
-        {/* Category Filters */}
         <div className="flex flex-wrap justify-center gap-2 border-b border-[var(--border-color)] pb-6">
           {categories.map((cat) => (
             <button
@@ -145,7 +143,6 @@ function NewsPageContent() {
           ))}
         </div>
 
-        {/* News Grid */}
         {loading ? (
           <div className="py-20 text-center font-mono text-[#D4AF37] animate-pulse">
             LOADING OFFICIAL NEWS...
