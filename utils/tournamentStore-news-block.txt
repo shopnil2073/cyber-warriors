@@ -1,0 +1,105 @@
+INTEGRATION NOTE
+----------------
+1. At the top of your existing utils/tournamentStore.ts, add:
+   import { supabase } from "@/lib/supabase";
+
+2. Replace ONLY the old JSONBin news block (currently the section beginning with
+   // --- GLOBAL CLOUD DB CONFIG (JSONBIN / PUBLIC API) --- and ending at
+   export const deleteNews = deleteNewsFromCloud;
+   ) with the code below. Keep the Fixture, Standing and Ticker sections.
+
+CODE TO INSERT:
+
+const mapNewsRow = (row: any): NewsItem => ({
+  id: String(row.id),
+  title: String(row.title || "Untitled"),
+  slug: String(row.slug || ""),
+  category: String(row.category || "ANNOUNCEMENT"),
+  content: String(row.content || ""),
+  date: row.published_at || row.created_at || undefined,
+  author: String(row.author_name || "CYBER WARRIORS"),
+  imageUrl: row.image_url || undefined,
+  status: String(row.status || "Draft"),
+  createdAt: row.created_at || undefined,
+  updatedAt: row.updated_at || undefined,
+});
+
+export const getStoredNews = (): NewsItem[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem("cw_news");
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Supabase news read failed:", error.message);
+    return getStoredNews();
+  }
+
+  const mapped = (data || []).map(mapNewsRow);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("cw_news", JSON.stringify(mapped));
+  }
+  return mapped;
+};
+
+export const saveAllNews = async (newsArray: NewsItem[]): Promise<boolean> => {
+  for (const article of newsArray) {
+    const ok = await saveNews(article);
+    if (!ok) return false;
+  }
+  return true;
+};
+
+export const saveNewsToCloud = saveAllNews;
+
+export const saveNews = async (article: NewsItem): Promise<boolean> => {
+  const payload = {
+    title: article.title,
+    slug: (article.slug || article.title).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
+    category: article.category || "ANNOUNCEMENT",
+    excerpt: "",
+    content: article.content || "",
+    image_url: article.imageUrl || null,
+    author_name: article.author || "CYBER WARRIORS",
+    status: article.status === "Draft" ? "Draft" : "Published",
+    published_at: article.status === "Draft" ? null : (article.updatedAt || new Date().toISOString()),
+    updated_at: new Date().toISOString(),
+  };
+
+  const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(article.id);
+  const result = looksLikeUuid
+    ? await supabase.from("news_articles").update(payload).eq("id", article.id)
+    : await supabase.from("news_articles").insert({ ...payload, legacy_id: article.id });
+
+  if (result.error) {
+    console.error("Supabase news save failed:", result.error.message);
+    return false;
+  }
+  return true;
+};
+
+export const deleteNewsFromCloud = async (id: string): Promise<boolean> => {
+  const { error } = await supabase.from("news_articles").delete().eq("id", id);
+  if (error) {
+    console.error("Supabase news delete failed:", error.message);
+    return false;
+  }
+  return true;
+};
+
+export const deleteNews = deleteNewsFromCloud;
+
+IMPORTANT:
+- The replacement removes the JSONBin Master Key from the site code.
+- The admin page in this kit writes to Supabase directly; RLS policies are the actual security boundary.
+- The old news panel's IDs like art_123 may be migrated to legacy_id. New articles use UUID IDs from Supabase.

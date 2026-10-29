@@ -1,0 +1,30 @@
+OPTIONAL: SINGLE-LOGIN BRIDGE FOR YOUR CURRENT LOGIN
+====================================================
+
+Your existing login uses the public `players` table. To avoid having admins sign in a second time on /news-panel, first create a Supabase Auth user for each approved admin email and use the same password they enter in the current site login. Then, inside utils/userStore.ts, in loginPlayer(), AFTER the existing player/email/password lookup has succeeded, add this snippet before the function returns the mapped profile.
+
+Copy the fixed admin email list from app/components/Sidebar.tsx into ADMIN_EMAILS below. Keep the actual admin list private to your project if you prefer.
+
+const ADMIN_EMAILS = [
+  "replace-with-admin-1@gmail.com",
+  "replace-with-admin-2@gmail.com",
+].map((value) => value.toLowerCase().trim());
+
+if (ADMIN_EMAILS.includes(email.toLowerCase().trim())) {
+  const { error: authError } = await supabase.auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password: pass,
+  });
+
+  if (authError) {
+    // The old site login may still work, but News Panel will require its own
+    // Supabase Auth login until this admin has a matching Auth account.
+    console.warn("Could not start the secure Supabase admin session. Check the admin's Supabase Auth account.");
+  }
+}
+
+IMPORTANT:
+- This snippet is only a bridge, not a full authentication migration.
+- The `news_admins` database table and its RLS policies are what authorize news writes.
+- Do not trust `getActiveUser()` or localStorage for database permissions.
+- Your current login implementation stores/queries player passwords in the `players` table. Plan to migrate all accounts to Supabase Auth, remove password from public profile selects, and drop the legacy password column only after all login/register code has been updated.

@@ -1,0 +1,43 @@
+RECOMMENDED MENU SECURITY PATCH — app/components/Sidebar.tsx
+===========================================================
+
+The current Sidebar uses the localStorage `cw_active_user` and a hardcoded allowlist to decide whether to show Command Center. That can be edited in the browser, so switch the menu gate to the actual Supabase Auth session plus the `news_admins` table.
+
+1. Add this import:
+   import { supabase } from "@/lib/supabase";
+
+2. Replace the existing `checkUserAccess` useCallback (the block that declares SUPER_ADMIN_EMAIL / ALLOWED_ADMIN_EMAILS and checks localStorage) with:
+
+const checkUserAccess = useCallback(async () => {
+  const activeUser = getActiveUser();
+  if (activeUser?.name) {
+    const nameParts = activeUser.name.trim().split(" ");
+    setUserName(nameParts[nameParts.length - 1] || null);
+  } else {
+    setUserName(null);
+  }
+
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      setHasCommandCenterAccess(false);
+      return;
+    }
+
+    const { data: adminRow, error: adminError } = await supabase
+      .from("news_admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    setHasCommandCenterAccess(!adminError && Boolean(adminRow));
+  } catch {
+    setHasCommandCenterAccess(false);
+  }
+}, []);
+
+3. In the existing useEffect, change `checkUserAccess();` to `void checkUserAccess();`. Keep the `storage` event listener if you still want the welcome name to refresh, but don't treat localStorage as proof of admin permission.
+
+4. For a seamless single login, use patches/userStore-admin-session-snippet.txt and provision the matching Supabase Auth users. If you do not add that bridge, admins can still sign in from the /news-panel page itself.
+
+This gate hides the entire Command Center from accounts that are not in `news_admins`. If some existing Admin Console operators should NOT administer news, create a separate role table for Command Center before applying this broader gate.

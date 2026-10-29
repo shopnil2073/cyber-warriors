@@ -1,218 +1,179 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createPublicSupabaseClient } from "@/lib/supabase/server-public";
 
-import React, { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { fetchNewsFromCloud, NewsItem } from "../../utils/tournamentStore";
+export const dynamic = "force-dynamic";
 
-export const dynamic = "force-static";
+const PAGE_SIZE = 9;
 
-function NewsPageContent() {
-  const searchParams = useSearchParams();
-  const articleSlug = searchParams.get("article");
+type SearchParams = Promise<{
+  page?: string | string[];
+  article?: string | string[];
+}>;
 
-  const [newsList, setNewsList] = useState<NewsItem[]>([]);
-  const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+type NewsCard = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  excerpt: string | null;
+  content: string;
+  image_url: string | null;
+  author_name: string;
+  created_at: string;
+  published_at: string | null;
+};
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const data = await fetchNewsFromCloud();
-        const published = data.filter((item) => item.status !== "Draft");
-        setNewsList(published);
+function dateLabel(value: string | null, fallback: string) {
+  const dateValue = value || fallback;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "CYBER WARRIORS";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
 
-        if (articleSlug) {
-          const found = published.find(
-            (n) => n.slug === articleSlug || n.id === articleSlug || decodeURIComponent(articleSlug) === n.slug
-          );
-          setSelectedArticle(found || null);
-        } else {
-          setSelectedArticle(null);
-        }
-      } catch (err) {
-        console.error("Error fetching news:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [articleSlug]);
+export default async function NewsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+  const oldArticleParam = Array.isArray(params.article)
+    ? params.article[0]
+    : params.article;
 
-  const categories = ["ALL", "ANNOUNCEMENT", "TRANSFER", "TOURNAMENT", "ACADEMY", "RULES"];
-
-  const filteredNews = selectedCategory === "ALL" 
-    ? newsList 
-    : newsList.filter((item) => item.category?.toUpperCase() === selectedCategory);
-
-  if (articleSlug) {
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-[#0a0e17] text-white flex items-center justify-center font-mono text-[#D4AF37] animate-pulse">
-          LOADING ARTICLE...
-        </div>
-      );
-    }
-
-    if (!selectedArticle) {
-      return (
-        <div className="min-h-screen bg-[#0a0e17] text-white flex flex-col items-center justify-center p-4 text-center">
-          <h1 className="text-2xl font-bold text-red-500 uppercase">Article Not Found</h1>
-          <p className="text-gray-400 mt-2 text-sm">The article you requested does not exist or has been removed.</p>
-          <a
-            href="/news"
-            className="mt-6 text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 px-4 py-2 rounded-xl hover:bg-[#D4AF37]/10 transition-colors uppercase"
-          >
-            ← Back to All News
-          </a>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-[#0a0e17] text-gray-200 py-10 px-4 font-sans">
-        <div className="max-w-4xl mx-auto bg-[#121927] border border-[#1f293d] rounded-2xl overflow-hidden shadow-2xl p-6 md:p-10 space-y-6">
-          <a
-            href="/news"
-            className="inline-block text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 px-3 py-1.5 rounded-lg hover:bg-[#D4AF37]/10 transition-colors uppercase"
-          >
-            ← Back to All News
-          </a>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="bg-[#D4AF37] text-black text-xs font-black px-3 py-1 rounded-md uppercase tracking-wider">
-              {selectedArticle.category}
-            </span>
-            <span className="text-xs text-gray-400 font-mono">
-              {selectedArticle.createdAt || selectedArticle.date}
-            </span>
-            <span className="text-xs text-gray-400 font-mono">
-              • By {selectedArticle.author || "CW ADMIN"}
-            </span>
-          </div>
-
-          <h1 className="text-2xl md:text-4xl font-extrabold text-white leading-tight uppercase">
-            {selectedArticle.title}
-          </h1>
-
-          {selectedArticle.imageUrl && (
-            <div className="w-full h-64 md:h-96 rounded-xl overflow-hidden border border-[#1f293d]">
-              <img 
-                src={selectedArticle.imageUrl} 
-                alt={selectedArticle.title} 
-                className="w-full h-full object-cover" 
-              />
-            </div>
-          )}
-
-          <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-line text-sm md:text-base">
-            {selectedArticle.content}
-          </div>
-        </div>
-      </div>
-    );
+  // Keep old URLs such as /news?article=my-slug working.
+  if (oldArticleParam) {
+    redirect(`/news/${encodeURIComponent(oldArticleParam)}`);
   }
 
+  const rawPage = Array.isArray(params.page) ? params.page[0] : params.page;
+  const parsedPage = Number.parseInt(rawPage || "1", 10);
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const supabase = createPublicSupabaseClient();
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data, count, error } = await supabase
+    .from("news_articles")
+    .select(
+      "id,title,slug,category,excerpt,content,image_url,author_name,created_at,published_at",
+      { count: "exact" }
+    )
+    .eq("status", "Published")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const articles = (data || []) as NewsCard[];
+  const totalPages = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE));
+
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] py-10 px-4 font-sans">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        <div className="text-center space-y-2">
-          <span className="text-[#D4AF37] text-xs font-black tracking-widest uppercase border border-[#D4AF37]/30 px-3 py-1 rounded-full bg-[#D4AF37]/10">
-            CYBER WARRIORS H.Q.
+    <div className="min-h-screen bg-[#0a0e17] px-4 py-10 text-white md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 border-b border-[#D4AF37]/30 pb-7 text-center">
+          <span className="inline-flex rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
+            Cyber Warriors H.Q.
           </span>
-          <h1 className="text-3xl md:text-5xl font-extrabold uppercase tracking-tight text-white">
-            OFFICIAL <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]">NEWS & ANNOUNCEMENTS</span>
+          <h1 className="mt-4 text-3xl font-black uppercase tracking-tight md:text-5xl">
+            Club <span className="text-[#D4AF37]">Headlines</span>
           </h1>
+          <p className="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-gray-400 md:text-sm">
+            Official News &amp; Announcements
+          </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-2 border-b border-[var(--border-color)] pb-6">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
-                selectedCategory === cat
-                  ? "bg-[#D4AF37] text-black shadow-lg scale-105"
-                  : "bg-[var(--bg-card)] text-gray-400 border border-[var(--border-color)] hover:text-white hover:border-[#D4AF37]"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div className="py-20 text-center font-mono text-[#D4AF37] animate-pulse">
-            LOADING OFFICIAL NEWS...
+        {error ? (
+          <div className="rounded-2xl border border-red-900 bg-red-950/30 p-6 text-center text-sm text-red-200">
+            News could not be loaded. Check the Supabase table and RLS policies.
           </div>
-        ) : filteredNews.length === 0 ? (
-          <div className="py-20 text-center text-gray-400 font-bold uppercase">
-            No published news found in this category.
+        ) : articles.length === 0 ? (
+          <div className="rounded-2xl border border-[#1f293d] bg-[#121927] p-10 text-center">
+            <h2 className="text-xl font-black text-[#D4AF37]">NO NEWS PUBLISHED YET</h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Official Cyber Warriors announcements will appear here.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNews.map((item) => {
-              const targetUrl = `/news?article=${encodeURIComponent(item.slug || item.id)}`;
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => {
+              const excerpt =
+                article.excerpt?.trim() ||
+                article.content.replace(/\s+/g, " ").slice(0, 180);
+
               return (
-                <a
-                  key={item.id}
-                  href={targetUrl}
-                  className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden hover:border-[#D4AF37] transition-all duration-300 flex flex-col group shadow-xl"
+                <article
+                  key={article.id}
+                  className="group overflow-hidden rounded-2xl border border-[#1f293d] bg-[#121927] transition hover:-translate-y-1 hover:border-[#D4AF37]/60 hover:shadow-xl hover:shadow-black/30"
                 >
-                  <div className="relative h-48 w-full bg-slate-900 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 font-bold">
-                        CYBER WARRIORS
-                      </div>
-                    )}
-                    <span className="absolute top-3 left-3 bg-[#D4AF37] text-black text-[10px] font-black uppercase px-2.5 py-1 rounded">
-                      {item.category}
-                    </span>
-                  </div>
-
-                  <div className="p-5 flex flex-col justify-between flex-1 space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-xs text-gray-400 font-mono">
-                        {item.createdAt || item.date} • By {item.author || "CW ADMIN"}
-                      </p>
-                      <h3 className="text-base font-bold text-white group-hover:text-[#D4AF37] transition-colors line-clamp-2 leading-snug uppercase">
-                        {item.title}
-                      </h3>
-                      <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
-                        {item.content}
-                      </p>
+                  <Link href={`/news/${encodeURIComponent(article.slug)}`} className="block">
+                    <div className="relative aspect-[16/9] overflow-hidden bg-[#080b12]">
+                      {article.image_url ? (
+                        // Remote news-cover URLs are stored in Supabase; a plain img avoids remote-domain config issues.
+                        <img
+                          src={article.image_url}
+                          alt={article.title}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#171b29] to-[#080b12] text-sm font-black tracking-[0.25em] text-[#D4AF37]">
+                          CYBER WARRIORS
+                        </div>
+                      )}
+                      <span className="absolute left-3 top-3 rounded-md bg-[#D4AF37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-black">
+                        {article.category}
+                      </span>
                     </div>
-
-                    <div className="text-xs font-black text-[#D4AF37] uppercase flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      READ FULL ARTICLE <span>→</span>
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                        {dateLabel(article.published_at, article.created_at)}
+                        <span className="px-2 text-[#D4AF37]">•</span>
+                        {article.author_name || "CYBER WARRIORS"}
+                      </p>
+                      <h2 className="mt-3 line-clamp-3 text-lg font-extrabold leading-snug text-white transition group-hover:text-[#D4AF37]">
+                        {article.title}
+                      </h2>
+                      <p className="mt-3 line-clamp-4 text-sm leading-6 text-gray-400">
+                        {excerpt}
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#D4AF37]">
+                        Read Article <span aria-hidden="true">→</span>
+                      </span>
                     </div>
-                  </div>
-                </a>
+                  </Link>
+                </article>
               );
             })}
           </div>
         )}
+
+        {totalPages > 1 && (
+          <nav className="mt-10 flex items-center justify-center gap-3" aria-label="News pages">
+            {page > 1 ? (
+              <Link
+                href={`/news?page=${page - 1}`}
+                className="rounded-lg border border-[#1f293d] px-4 py-2 text-xs font-bold text-gray-200 hover:border-[#D4AF37]"
+              >
+                ← Previous
+              </Link>
+            ) : null}
+            <span className="text-xs font-bold tracking-widest text-gray-400">
+              PAGE {page} / {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={`/news?page=${page + 1}`}
+                className="rounded-lg border border-[#1f293d] px-4 py-2 text-xs font-bold text-gray-200 hover:border-[#D4AF37]"
+              >
+                Next →
+              </Link>
+            ) : null}
+          </nav>
+        )}
       </div>
     </div>
-  );
-}
-
-export default function NewsPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0a0e17] text-white flex items-center justify-center font-mono text-[#D4AF37] animate-pulse">
-        LOADING NEWS HQ...
-      </div>
-    }>
-      <NewsPageContent />
-    </Suspense>
   );
 }
