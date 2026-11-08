@@ -16,10 +16,7 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
   const [userName, setUserName] = useState<string | null>(null);
   const [hasCommandCenterAccess, setHasCommandCenterAccess] = useState<boolean>(false);
 
-  // 1. Super Admin Email (Primary Master Control)
   const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
-
-  // 2. Global Authorized Admin List (Hardcoded Fallback for All Devices)
   const ALLOWED_ADMIN_EMAILS = [
     "razibulislamhridoy@gmail.com",
     "samiaakter2073@gmail.com",
@@ -33,7 +30,6 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
     const activeUser = getActiveUser();
 
     if (activeUser && activeUser.email) {
-      // Set display name
       if (activeUser.name) {
         const nameParts = activeUser.name.trim().split(" ");
         setUserName(nameParts[nameParts.length - 1]);
@@ -43,18 +39,15 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
 
       const userEmail = activeUser.email.toLowerCase().trim();
 
-      // Check 1: Super Admin
       if (userEmail === SUPER_ADMIN_EMAIL.toLowerCase()) {
         setHasCommandCenterAccess(true);
         return;
       }
 
-      // Check 2: Hardcoded Allowed Admin List (Works cross-device instantly)
       const isHardcodedAdmin = ALLOWED_ADMIN_EMAILS.map((e) =>
         e.toLowerCase().trim()
       ).includes(userEmail);
 
-      // Check 3: LocalStorage Dynamic Admin List (Same-device dynamic grants)
       let isLocalStorageAdmin = false;
       try {
         const grantedAdmins = JSON.parse(
@@ -77,10 +70,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
   }, []);
 
   useEffect(() => {
-    // Initial check when component mounts or opens
     checkUserAccess();
 
-    // Event listener for cross-tab or instant localStorage updates
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "cw_admin_emails" || e.key === "cw_active_user") {
         checkUserAccess();
@@ -96,8 +87,6 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
   return (
     <div className="fixed inset-0 z-50 bg-[#0B0E14] text-white overflow-y-auto w-full h-full animate-fadeIn">
       <div className="w-full max-w-4xl mx-auto p-4 md:p-8 flex flex-col min-h-screen justify-between">
-        
-        {/* Header Section */}
         <div>
           <div className="flex justify-between items-center pb-4 border-b border-[#23293A] mb-6">
             <div className="flex items-center gap-3">
@@ -109,7 +98,6 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               </h2>
             </div>
             
-            {/* Close Button */}
             <button 
               onClick={onClose} 
               className="text-[#D4AF37] hover:text-white text-3xl font-bold p-2 transition-all cursor-pointer"
@@ -118,7 +106,6 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </button>
           </div>
 
-          {/* User Welcome & Theme Switcher */}
           <div className="flex items-center justify-between bg-[#121624] p-4 rounded-xl border border-[#23293A] mb-6">
             <div className="flex items-center gap-3">
               <span className="text-xl">👑</span>
@@ -135,13 +122,12 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </button>
           </div>
 
-          {/* MY CALENDAR Section */}
           <div className="bg-[#121624] rounded-2xl p-4 md:p-5 border border-[#23293A] mb-6 space-y-3">
             <span className="text-xs font-black uppercase tracking-widest text-gray-400 block mb-2">
               MY CALENDAR
             </span>
-            <Link
-              href="/my-matches"
+            <Link 
+              href="/my-matches" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -157,14 +143,13 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </Link>
           </div>
 
-          {/* COMPETE & PLAY Section */}
           <div className="bg-[#121624] rounded-2xl p-4 md:p-5 border border-[#23293A] mb-6 space-y-3">
             <span className="text-xs font-black uppercase tracking-widest text-gray-400 block mb-2">
               COMPETE & PLAY
             </span>
             
-            <Link
-              href="/tournament"
+            <Link 
+              href="/tournament" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -180,8 +165,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               <span className="text-gray-500 group-hover:text-white text-lg">›</span>
             </Link>
 
-            <Link
-              href="/tournament"
+            <Link 
+              href="/tournament" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -194,8 +179,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               <span className="text-gray-500 group-hover:text-white text-lg">›</span>
             </Link>
 
-            <Link
-              href="/tournament"
+            <Link 
+              href="/tournament" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -209,14 +194,13 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </Link>
           </div>
 
-          {/* EXPLORE Section */}
           <div className="bg-[#121624] rounded-2xl p-4 md:p-5 border border-[#23293A] space-y-3 mb-6">
             <span className="text-xs font-black uppercase tracking-widest text-gray-400 block mb-2">
               EXPLORE
             </span>
             
-            <Link
-              href="/news"
+            <Link 
+              href="/news" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -229,8 +213,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               <span className="text-gray-500 group-hover:text-white text-lg">›</span>
             </Link>
 
-            <Link
-              href="/ranking"
+            <Link 
+              href="/ranking" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -243,8 +227,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
               <span className="text-gray-500 group-hover:text-white text-lg">›</span>
             </Link>
 
-            <Link
-              href="/players"
+            <Link 
+              href="/players" 
               onClick={onClose}
               className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
             >
@@ -258,15 +242,14 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </Link>
           </div>
 
-          {/* COMMAND CENTER Section - Restricted to Authorized Admins */}
           {hasCommandCenterAccess && (
             <div className="bg-[#121624] rounded-2xl p-4 md:p-5 border border-[#D4AF37]/40 space-y-3 mb-8 shadow-lg animate-fadeIn">
               <span className="text-xs font-black uppercase tracking-widest text-[#D4AF37] flex items-center gap-2 mb-2">
                 <span>⚡</span> COMMAND CENTER
               </span>
               
-              <Link
-                href="/admin"
+              <Link 
+                href="/admin" 
                 onClick={onClose}
                 className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
               >
@@ -279,8 +262,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
                 <span className="text-gray-500 group-hover:text-white text-lg">›</span>
               </Link>
 
-              <Link
-                href="/matchday"
+              <Link 
+                href="/matchday" 
                 onClick={onClose}
                 className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
               >
@@ -293,8 +276,8 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
                 <span className="text-gray-500 group-hover:text-white text-lg">›</span>
               </Link>
 
-              <Link
-                href="/news-panel"
+              <Link 
+                href="/news-panel" 
                 onClick={onClose}
                 className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1A2035] transition-all group border border-transparent hover:border-[#D4AF37]/30"
               >
@@ -309,7 +292,6 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

@@ -92,7 +92,9 @@ export default async function NewsArticlePage({
               {article.category}
             </span>
             <span className="text-xs text-gray-500">{dateLabel}</span>
-            <span className="text-xs text-gray-500">• By {article.author_name || "CYBER WARRIORS"}</span>
+            <span className="text-xs text-gray-500">
+              By {article.author_name || "CYBER WARRIORS"}
+            </span>
           </div>
           <h1 className="mt-5 text-2xl font-black uppercase leading-tight text-white md:text-4xl">
             {article.title}
