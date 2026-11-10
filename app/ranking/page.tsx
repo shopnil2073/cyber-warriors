@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getAllUsers, UserProfile } from "../utils/userStore";
+import { getAllUsers, UserProfile } from "../../utils/userStore";
 
 interface PlayerRank {
   id: string;

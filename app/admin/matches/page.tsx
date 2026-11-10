@@ -9,7 +9,7 @@ import {
   updatePlayerInfo,
   Fixture,
   Standing,
-} from "../../utils/tournamentStore";
+} from "../../../utils/tournamentStore";
 import CardCreatorTab from "../../components/admin/CardCreatorTab";
 
 const SUPER_ADMIN = "shopnilhossainhim@gmail.com";

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { getStoredFixtures, getStoredStandings, Fixture, Standing } from "../utils/tournamentStore";
+import { getStoredFixtures, getStoredStandings, Fixture, Standing } from "../../utils/tournamentStore";
 
 export default function SoloPage() {
   const [subTab, setSubTab] = useState<"open" | "live" | "completed">("live");

@@ -4,7 +4,7 @@ import React, { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registerNewPlayer, UserProfile } from "../utils/userStore";
+import { registerNewPlayer, UserProfile } from "../../utils/userStore";
 
 export default function RegisterPage() {
   const router = useRouter();
