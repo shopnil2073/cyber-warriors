@@ -1,19 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Browser client (login + admin panel). Shudhu public/anon key use hoy.
+// Kokhono service_role key NEXT_PUBLIC_ diye rakhba na.
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!url || !key) {
   throw new Error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Set them in .env.local and Vercel Project Settings."
+    "Supabase env missing: NEXT_PUBLIC_SUPABASE_URL ar NEXT_PUBLIC_SUPABASE_ANON_KEY set koro (.env.local + Vercel)."
   );
 }
 
-// Browser client. Never put a Supabase service-role key in this file.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-});
+export const supabase = createClient(url, key);

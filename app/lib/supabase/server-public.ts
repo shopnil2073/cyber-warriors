@@ -1,22 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * Read-only public client for Server Components.
- * RLS allows it to read published news but not drafts or write anything.
- */
-export function createPublicSupabaseClient() {
+// Server-e public data porar jonno (login chara). RLS shudhu published news dey.
+export function createPublicClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!url || !anonKey) {
-    throw new Error("Supabase public environment variables are missing.");
+  if (!url || !key) {
+    throw new Error(
+      "Supabase env missing: NEXT_PUBLIC_SUPABASE_URL ar NEXT_PUBLIC_SUPABASE_ANON_KEY set koro (.env.local + Vercel)."
+    );
   }
 
-  return createClient(url, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }

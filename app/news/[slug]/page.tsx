@@ -1,126 +1,69 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createPublicSupabaseClient } from "@/lib/supabase/server-public";
+import { getNewsBySlug } from "../../lib/newsService";
+import { formatDate } from "../../lib/newsUtils";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
-type Article = {
-  id: string;
-  legacy_id: string | null;
-  title: string;
-  slug: string;
-  category: string;
-  excerpt: string | null;
-  content: string;
-  image_url: string | null;
-  author_name: string;
-  status: "Draft" | "Published";
-  created_at: string;
-  published_at: string | null;
-};
+// Next.js 15/16: params ekhon Promise (await korte hobe)
+type Props = { params: Promise<{ slug: string }> };
 
-async function findPublishedArticle(slug: string): Promise<Article | null> {
-  const supabase = createPublicSupabaseClient();
-  const fields = "id,legacy_id,title,slug,category,excerpt,content,image_url,author_name,status,created_at,published_at";
-
-  const bySlug = await supabase
-    .from("news_articles")
-    .select(fields)
-    .eq("slug", slug)
-    .eq("status", "Published")
-    .maybeSingle();
-
-  if (bySlug.data) return bySlug.data as Article;
-
-  // Backwards compatibility for old /news?article=<legacy-id> links.
-  const byLegacyId = await supabase
-    .from("news_articles")
-    .select(fields)
-    .eq("legacy_id", slug)
-    .eq("status", "Published")
-    .maybeSingle();
-
-  return (byLegacyId.data as Article | null) || null;
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const article = await findPublishedArticle(decodeURIComponent(slug));
-  if (!article) return { title: "News | Cyber Warriors" };
+  const article = await getNewsBySlug(slug);
+  if (!article) return { title: "News not found | Cyber Warriors" };
+
   return {
     title: `${article.title} | Cyber Warriors`,
-    description: article.excerpt || article.content.slice(0, 160),
+    description: article.excerpt ?? undefined,
+    openGraph: {
+      title: article.title,
+      description: article.excerpt ?? undefined,
+      type: "article",
+      images: article.image_url ? [article.image_url] : undefined,
+    },
   };
 }
 
-export default async function NewsArticlePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function NewsArticlePage({ params }: Props) {
   const { slug } = await params;
-  const article = await findPublishedArticle(decodeURIComponent(slug));
+  const article = await getNewsBySlug(slug);
   if (!article) notFound();
 
-  const dateValue = article.published_at || article.created_at;
-  const date = new Date(dateValue);
-  const dateLabel = Number.isNaN(date.getTime())
-    ? "Cyber Warriors"
-    : new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        day: "2-digit",
-        year: "numeric",
-      }).format(date);
-
   return (
-    <div className="min-h-screen bg-[#0a0e17] px-4 py-8 text-gray-200 md:py-12">
-      <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-[#1f293d] bg-[#121927] shadow-2xl shadow-black/30">
-        <div className="p-5 md:p-10">
-          <Link
-            href="/news"
-            className="inline-flex rounded-lg border border-[#D4AF37]/40 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
-          >
-            ← All News
-          </Link>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <span className="rounded-md bg-[#D4AF37] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-black">
-              {article.category}
-            </span>
-            <span className="text-xs text-gray-500">{dateLabel}</span>
-            <span className="text-xs text-gray-500">
-              By {article.author_name || "CYBER WARRIORS"}
-            </span>
-          </div>
-          <h1 className="mt-5 text-2xl font-black uppercase leading-tight text-white md:text-4xl">
-            {article.title}
-          </h1>
-          {article.excerpt ? (
-            <p className="mt-4 border-l-2 border-[#D4AF37] pl-4 text-base leading-7 text-gray-300 md:text-lg">
-              {article.excerpt}
-            </p>
-          ) : null}
+    <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      <Link
+        href={"/news" as Route}
+        className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+      >
+        Back to news
+      </Link>
+
+      <article className="mt-4">
+        <div className="text-sm text-zinc-500 dark:text-zinc-400">
+          {article.category}
+          {article.published_at ? ` · ${formatDate(article.published_at)}` : ""}
+        </div>
+        <h1 className="mt-2 text-3xl font-bold leading-tight">{article.title}</h1>
+        <div className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          By {article.author_name}
         </div>
 
-        {article.image_url ? (
-          <div className="max-h-[560px] overflow-hidden border-y border-[#1f293d] bg-black">
-            <img src={article.image_url} alt={article.title} className="mx-auto max-h-[560px] w-full object-contain" />
-          </div>
-        ) : null}
+        {article.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={article.image_url}
+            alt={article.title}
+            className="mt-6 w-full rounded-xl object-cover"
+          />
+        )}
 
-        <div className="p-5 md:p-10">
-          <div className="whitespace-pre-line break-words text-sm leading-8 text-gray-300 md:text-base">
-            {article.content}
-          </div>
-          <div className="mt-10 border-t border-[#1f293d] pt-5 text-center text-[10px] font-black uppercase tracking-[0.25em] text-[#D4AF37]">
-            Cyber Warriors • Driven by Passion. Defined by Glory.
-          </div>
+        {/* whitespace-pre-line: Enter dile notun line/paragraph hobe. HTML inject hoy na (safe). */}
+        <div className="mt-6 whitespace-pre-line text-base leading-relaxed">
+          {article.content}
         </div>
       </article>
-    </div>
+    </main>
   );
 }

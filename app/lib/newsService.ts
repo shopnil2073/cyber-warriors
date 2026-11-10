@@ -1,37 +1,32 @@
-import { supabase } from './supabase';
+import { createPublicClient } from "./supabase/server-public";
+import { NEWS_COLUMNS, type NewsArticle } from "./newsUtils";
 
-export async function fetchPublishedNews() {
-  const { data, error } = await supabase
-    .from('news_articles')
-    .select('*')
-    .eq('status', 'Published')
-    .order('published_at', { ascending: false });
+export async function getPublishedNews(limit = 60): Promise<NewsArticle[]> {
+  const { data, error } = await createPublicClient()
+    .from("news_articles")
+    .select(NEWS_COLUMNS)
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(limit);
 
   if (error) {
-    console.error('Error fetching news:', error);
+    console.error("getPublishedNews:", error.message);
     return [];
   }
-  return data;
+  return (data ?? []) as NewsArticle[];
 }
 
-export async function createNewsArticle(article: {
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  category: string;
-  image_url?: string;
-  author_name?: string;
-  status?: string;
-}) {
-  const { data, error } = await supabase
-    .from('news_articles')
-    .insert([article])
-    .select();
+export async function getNewsBySlug(slug: string): Promise<NewsArticle | null> {
+  const { data, error } = await createPublicClient()
+    .from("news_articles")
+    .select(NEWS_COLUMNS)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
 
   if (error) {
-    console.error('Error creating news article:', error);
-    throw error;
+    console.error("getNewsBySlug:", error.message);
+    return null;
   }
-  return data;
+  return (data as NewsArticle | null) ?? null;
 }
