@@ -6,13 +6,20 @@ import Link from "next/link";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import {
-  NEWS_CATEGORIES,
   NEWS_COLUMNS,
   formatDate,
   slugify,
   type NewsArticle,
   type NewsStatus,
 } from "../lib/newsUtils";
+
+const CUSTOM_CATEGORIES = [
+  "Player Achievements",
+  "Club Achievements",
+  "Announcement",
+  "Tournament Update",
+  "Funny",
+];
 
 type FormState = {
   id?: string;
@@ -28,19 +35,19 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   title: "",
   slug: "",
-  category: NEWS_CATEGORIES[0],
-  author_name: "CW Admin",
+  category: CUSTOM_CATEGORIES[0],
+  author_name: "",
   image_url: "",
   excerpt: "",
   content: "",
 };
 
 const inputCls =
-  "w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/60 dark:border-white/20 dark:focus:border-white/60";
+  "w-full rounded-xl border border-zinc-700/50 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";
 const btnCls =
-  "rounded-lg border border-black/20 px-4 py-2 text-sm font-medium transition hover:bg-black/5 disabled:opacity-50 dark:border-white/20 dark:hover:bg-white/10";
+  "rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-700 hover:text-white disabled:opacity-50";
 const btnPrimaryCls =
-  "rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:opacity-80 disabled:opacity-50 dark:bg-white dark:text-black";
+  "rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:opacity-90 disabled:opacity-50 shadow-lg shadow-amber-500/10";
 
 export default function NewsPanelPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -54,6 +61,7 @@ export default function NewsPanelPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [customExcerpt, setCustomExcerpt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -92,7 +100,6 @@ export default function NewsPanelPage() {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      // callback er bhitore sorasori await na kore alada kore chalano nirapod
       setTimeout(() => {
         void verifyAdmin(s);
       }, 0);
@@ -127,28 +134,57 @@ export default function NewsPanelPage() {
     }));
   }
 
-  async function uploadImage(file: File) {
-    if (!file.type.startsWith("image/")) {
-      setMsg({ type: "err", text: "Shudhu image file dao." });
-      return;
+  function onContentChange(value: string) {
+    setForm((f) => {
+      let updatedExcerpt = f.excerpt;
+      if (!customExcerpt) {
+        const lines = value.split("\n").filter((l) => l.trim().length > 0);
+        updatedExcerpt = lines.slice(0, 2).join(" ");
+      }
+      return { ...f, content: value, excerpt: updatedExcerpt };
+    });
+  }
+
+  // Handle multiple image uploads (1st image will be default thumbnail)
+  async function uploadImages(files: FileList) {
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+      if (!file.type.startsWith("image/")) {
+        setMsg({ type: "err", text: "Shudhu image file gulo select koro." });
+        return;
+      }
+      if (file.size > 3 * 1024 * 1024) {
+        setMsg({ type: "err", text: "Protiটি image 3MB er choto hote hobe." });
+        return;
+      }
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setMsg({ type: "err", text: "Image 3MB er choto hote hobe." });
-      return;
-    }
+
     setBusy(true);
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("news-images")
-      .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
-    if (error) {
-      setMsg({ type: "err", text: `Upload hoyni: ${error.message}` });
-    } else {
-      const { data } = supabase.storage.from("news-images").getPublicUrl(path);
-      setField("image_url", data.publicUrl);
-      setMsg({ type: "ok", text: "Image upload hoyeche." });
+    let firstUploadedUrl = form.image_url;
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      
+      const { error } = await supabase.storage
+        .from("news-images")
+        .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
+
+      if (error) {
+        setMsg({ type: "err", text: `Upload failed: ${error.message}` });
+        setBusy(false);
+        return;
+      } else {
+        const { data } = supabase.storage.from("news-images").getPublicUrl(path);
+        if (i === 0 && !firstUploadedUrl) {
+          firstUploadedUrl = data.publicUrl;
+        }
+      }
     }
+
+    setField("image_url", firstUploadedUrl);
+    setMsg({ type: "ok", text: `${fileArray.length}ti image safollovabe upload hoyeche!` });
     setBusy(false);
   }
 
@@ -163,7 +199,7 @@ export default function NewsPanelPage() {
       title: form.title.trim(),
       slug,
       category: form.category,
-      author_name: form.author_name.trim() || "CW Admin",
+      author_name: form.author_name.trim() || "Cyber Warriors Admin",
       image_url: form.image_url.trim() || null,
       excerpt: form.excerpt.trim() || null,
       content: form.content,
@@ -186,9 +222,10 @@ export default function NewsPanelPage() {
       });
       return;
     }
-    setMsg({ type: "ok", text: status === "published" ? "Published." : "Draft saved." });
+    setMsg({ type: "ok", text: status === "published" ? "News successfully published!" : "Draft saved successfully!" });
     setForm(EMPTY_FORM);
     setSlugTouched(false);
+    setCustomExcerpt(false);
     await loadArticles();
   }
 
@@ -204,6 +241,7 @@ export default function NewsPanelPage() {
       content: a.content,
     });
     setSlugTouched(true);
+    setCustomExcerpt(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -221,238 +259,320 @@ export default function NewsPanelPage() {
     else await loadArticles();
   }
 
-  // ---------- UI ----------
   if (checking && !session) {
-    return <main className="mx-auto max-w-md px-4 py-16 text-sm">Loading...</main>;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-300">
+        <div className="animate-pulse text-lg font-medium">Loading panel...</div>
+      </main>
+    );
   }
 
   if (!session) {
     return (
-      <main className="mx-auto w-full max-w-md px-4 py-16">
-        <h1 className="text-2xl font-bold">News panel</h1>
-        <p className="mt-1 text-sm text-zinc-500">Admin email diye login koro.</p>
-        <form onSubmit={signIn} className="mt-6 space-y-3">
-          <input
-            className={inputCls}
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            className={inputCls}
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {authError && <p className="text-sm text-red-500">{authError}</p>}
-          <button type="submit" className={btnPrimaryCls} disabled={busy}>
-            Sign in
-          </button>
-        </form>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-xl">
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white">News Panel</h1>
+            <p className="mt-2 text-sm text-zinc-400">Admin email diye secure login koro</p>
+          </div>
+          <form onSubmit={signIn} className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Admin Email</label>
+              <input
+                className={inputCls}
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Password</label>
+              <input
+                className={inputCls}
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {authError && <p className="text-xs font-medium text-red-400">{authError}</p>}
+            <button type="submit" className={`w-full ${btnPrimaryCls} mt-2`} disabled={busy}>
+              {busy ? "Signing in..." : "Sign In to Panel"}
+            </button>
+          </form>
+        </div>
       </main>
     );
   }
 
   if (checking) {
-    return <main className="mx-auto max-w-md px-4 py-16 text-sm">Checking access...</main>;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-300">
+        <div className="text-sm">Checking admin permissions...</div>
+      </main>
+    );
   }
 
   if (!isAdmin) {
     return (
-      <main className="mx-auto w-full max-w-md px-4 py-16">
-        <h1 className="text-2xl font-bold">Access nai</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          {session.user.email} ei email news admin list e nai. Onno email diye login koro.
-        </p>
-        <button className={`${btnCls} mt-4`} onClick={signOut}>
-          Sign out
-        </button>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
+        <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-zinc-900 p-8 text-center shadow-2xl">
+          <h1 className="text-2xl font-bold text-red-400">Access Denied</h1>
+          <p className="mt-3 text-sm text-zinc-400">
+            <span className="font-semibold text-zinc-200">{session.user.email}</span> ei email-ti news admin list e registered nai.
+          </p>
+          <button className={`${btnCls} mt-6 w-full`} onClick={signOut}>
+            Sign Out
+          </button>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">News panel</h1>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-zinc-500">{session.user.email}</span>
-          <button className={btnCls} onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-      </div>
-
-      {msg && (
-        <p
-          className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
-            msg.type === "ok"
-              ? "border-green-600/40 text-green-600"
-              : "border-red-600/40 text-red-500"
-          }`}
-        >
-          {msg.text}
-        </p>
-      )}
-
-      {/* Editor */}
-      <section className="mt-6 space-y-3 rounded-xl border border-black/10 p-4 dark:border-white/10">
-        <h2 className="font-semibold">{form.id ? "Edit news" : "New news"}</h2>
-
-        <input
-          className={inputCls}
-          placeholder="Title"
-          value={form.title}
-          onChange={(e) => onTitleChange(e.target.value)}
-        />
-
-        <div className="grid gap-3 sm:grid-cols-3">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <main className="mx-auto w-full max-w-5xl px-4 py-12">
+        {/* Top Header */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 sm:flex-row sm:items-center sm:justify-between backdrop-blur-md">
           <div>
-            <label className="mb-1 block text-xs text-zinc-500">Slug (URL)</label>
-            <input
-              className={inputCls}
-              placeholder="my-news-title"
-              value={form.slug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                setField("slug", e.target.value);
-              }}
-            />
+            <h1 className="text-3xl font-extrabold tracking-tight text-white">Cyber Warriors News Console</h1>
+            <p className="text-xs text-zinc-400 mt-1">Manage club updates, match logs and announcements</p>
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-500">Category</label>
-            <select
-              className={inputCls}
-              value={form.category}
-              onChange={(e) => setField("category", e.target.value)}
-            >
-              {NEWS_CATEGORIES.map((c) => (
-                <option key={c} value={c} className="text-black">
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-500">Author name</label>
-            <input
-              className={inputCls}
-              value={form.author_name}
-              onChange={(e) => setField("author_name", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs text-zinc-500">Cover image (URL din, ba upload korun)</label>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              className={inputCls}
-              placeholder="https://..."
-              value={form.image_url}
-              onChange={(e) => setField("image_url", e.target.value)}
-            />
-            <input
-              type="file"
-              accept="image/*"
-              className="text-sm"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void uploadImage(f);
-                e.target.value = "";
-              }}
-            />
-          </div>
-          {form.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={form.image_url} alt="Preview" className="mt-2 max-h-40 rounded-lg" />
-          )}
-        </div>
-
-        <textarea
-          className={inputCls}
-          rows={2}
-          placeholder="Short summary (list page e dekhabe)"
-          value={form.excerpt}
-          onChange={(e) => setField("excerpt", e.target.value)}
-        />
-        <textarea
-          className={inputCls}
-          rows={10}
-          placeholder="Full content (Enter dile notun paragraph hobe)"
-          value={form.content}
-          onChange={(e) => setField("content", e.target.value)}
-        />
-
-        <div className="flex flex-wrap gap-2">
-          <button className={btnPrimaryCls} disabled={busy} onClick={() => save("published")}>
-            Publish
-          </button>
-          <button className={btnCls} disabled={busy} onClick={() => save("draft")}>
-            Save draft
-          </button>
-          {form.id && (
-            <button
-              className={btnCls}
-              onClick={() => {
-                setForm(EMPTY_FORM);
-                setSlugTouched(false);
-              }}
-            >
-              Cancel edit
+          <div className="flex items-center gap-4">
+            <span className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs text-zinc-300">
+              {session.user.email}
+            </span>
+            <button className={btnCls} onClick={signOut}>
+              Sign Out
             </button>
-          )}
+          </div>
         </div>
-      </section>
 
-      {/* List */}
-      <section className="mt-8">
-        <h2 className="mb-3 font-semibold">All news ({articles.length})</h2>
-        {articles.length === 0 ? (
-          <p className="text-sm text-zinc-500">Ekhono kono news nai.</p>
-        ) : (
-          <ul className="space-y-2">
-            {articles.map((a) => (
-              <li
-                key={a.id}
-                className="flex flex-col gap-2 rounded-lg border border-black/10 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10"
+        {msg && (
+          <div
+            className={`mt-6 rounded-xl border px-4 py-3 text-sm font-medium ${
+              msg.type === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            }`}
+          >
+            {msg.text}
+          </div>
+        )}
+
+        {/* News Editor Section */}
+        <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-md space-y-6">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <h2 className="text-xl font-bold text-amber-400">
+              {form.id ? "✏️ Edit News Article" : "✨ Create New Article"}
+            </h2>
+            {form.id && (
+              <button
+                className="text-xs font-semibold text-zinc-400 hover:text-white"
+                onClick={() => {
+                  setForm(EMPTY_FORM);
+                  setSlugTouched(false);
+                  setCustomExcerpt(false);
+                }}
               >
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{a.title}</div>
-                  <div className="text-xs text-zinc-500">
-                    {a.status === "published" ? "Published" : "Draft"} · /news/{a.slug}
-                    {a.published_at ? ` · ${formatDate(a.published_at)}` : ""}
+                Cancel Edit
+              </button>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">News Title</label>
+            <input
+              className={inputCls}
+              placeholder="Enter eye-catching headline..."
+              value={form.title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">URL Slug</label>
+              <input
+                className={inputCls}
+                placeholder="news-slug-url"
+                value={form.slug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setField("slug", e.target.value);
+                }}
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Category</label>
+              <select
+                className={inputCls}
+                value={form.category}
+                onChange={(e) => setField("category", e.target.value)}
+              >
+                {CUSTOM_CATEGORIES.map((c) => (
+                  <option key={c} value={c} className="bg-zinc-900 text-white capitalize">
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Author Name</label>
+              <input
+                className={inputCls}
+                placeholder="Admin Name ex. Siam Hossain"
+                value={form.author_name}
+                onChange={(e) => setField("author_name", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Multiple Image Uploader */}
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Cover Images (Select multiple files, 1st image will be default thumbnail)
+            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-800/50 px-6 py-4 text-sm font-medium text-zinc-300 transition hover:border-amber-500 hover:bg-zinc-800 w-full">
+                <span>📁 Click to choose multiple images from device</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      void uploadImages(e.target.files);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {form.image_url && (
+              <div className="mt-4 flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={form.image_url} alt="Thumbnail preview" className="h-20 w-32 rounded-lg object-cover border border-zinc-700" />
+                <div>
+                  <p className="text-xs font-semibold text-emerald-400">Thumbnail Preview (1st Image)</p>
+                  <p className="text-xs text-zinc-400 truncate max-w-md mt-1">{form.image_url}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Short Summary (Auto-generated from content)- Eta pic er niche show korbe 
+              </label>
+              <button
+                type="button"
+                className="text-xs text-amber-400 hover:underline"
+                onClick={() => setCustomExcerpt(!customExcerpt)}
+              >
+                {customExcerpt ? "Auto-sync with content" : "Edit manually"}
+              </button>
+            </div>
+            <textarea
+              className={`${inputCls} ${!customExcerpt ? "opacity-75 cursor-not-allowed" : ""}`}
+              rows={2}
+              readOnly={!customExcerpt}
+              placeholder="First 2 lines will appear here automatically..."
+              value={form.excerpt}
+              onChange={(e) => setField("excerpt", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">Full Content</label>
+            <textarea
+              className={inputCls}
+              rows={10}
+              placeholder="Write your full news content here... (New lines will automatically feed summary)"
+              value={form.content}
+              onChange={(e) => onContentChange(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <button className={btnPrimaryCls} disabled={busy} onClick={() => save("published")}>
+              {busy ? "Processing..." : "🚀 Publish News"}
+            </button>
+            <button className={btnCls} disabled={busy} onClick={() => save("draft")}>
+              Save as Draft
+            </button>
+            {form.id && (
+              <button
+                className={btnCls}
+                onClick={() => {
+                  setForm(EMPTY_FORM);
+                  setSlugTouched(false);
+                  setCustomExcerpt(false);
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* Existing Articles List */}
+        <section className="mt-12">
+          <h2 className="mb-4 text-xl font-bold text-white">All Published & Draft Articles ({articles.length})</h2>
+          {articles.length === 0 ? (
+            <p className="text-sm text-zinc-500">Ekhono kono news create করা হয়নি।</p>
+          ) : (
+            <div className="space-y-3">
+              {articles.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 sm:flex-row sm:items-center sm:justify-between backdrop-blur-sm transition hover:border-zinc-700"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <span className={`h-2.5 w-2.5 rounded-full ${a.status === "published" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                      <h3 className="truncate font-semibold text-white">{a.title}</h3>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                      <span className="uppercase tracking-wider font-semibold text-amber-500/90">{a.category}</span>
+                      <span>•</span>
+                      <span>By {a.author_name}</span>
+                      <span>•</span>
+                      <span>/news/{a.slug}</span>
+                      {a.published_at && <span>• {formatDate(a.published_at)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {a.status === "published" && (
+                      <Link
+                        href={`/news/${a.slug}` as Route}
+                        target="_blank"
+                        className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700"
+                      >
+                        View Live
+                      </Link>
+                    )}
+                    <button className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700" onClick={() => startEdit(a)}>
+                      Edit
+                    </button>
+                    <button className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-700" onClick={() => toggleStatus(a)}>
+                      {a.status === "published" ? "Unpublish" : "Publish"}
+                    </button>
+                    <button className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20" onClick={() => remove(a)}>
+                      Delete
+                    </button>
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  {a.status === "published" && (
-                    <Link
-                      href={`/news/${a.slug}` as Route}
-                      target="_blank"
-                      className={btnCls}
-                    >
-                      View
-                    </Link>
-                  )}
-                  <button className={btnCls} onClick={() => startEdit(a)}>
-                    Edit
-                  </button>
-                  <button className={btnCls} onClick={() => toggleStatus(a)}>
-                    {a.status === "published" ? "Unpublish" : "Publish"}
-                  </button>
-                  <button className={btnCls} onClick={() => remove(a)}>
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
