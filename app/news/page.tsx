@@ -94,31 +94,33 @@ export default async function NewsPage({ searchParams }: Props) {
         ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedArticles.map((article) => {
-              // @ts-expect-error views might exist on article
+              // @ts-expect-error views might exist
               const viewsCount = article.views ?? 0;
+              const articleHref = `/news/${article.slug}` as Route;
 
               return (
                 <article
                   key={article.id}
                   className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/10"
                 >
-                  {article.image_url ? (
-                    <div className="relative h-52 w-full overflow-hidden bg-zinc-950">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {/* Picture Clickable Link */}
+                  <Link href={articleHref} className="relative block h-52 w-full overflow-hidden bg-zinc-950">
+                    {article.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={article.image_url}
                         alt={article.title}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute top-3 left-3 rounded-lg bg-zinc-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 backdrop-blur-md border border-zinc-700/50">
-                        {article.category}
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600 uppercase tracking-widest">
+                        Cyber Warriors
                       </div>
+                    )}
+                    <div className="absolute top-3 left-3 rounded-lg bg-zinc-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 backdrop-blur-md border border-zinc-700/50">
+                      {article.category}
                     </div>
-                  ) : (
-                    <div className="flex h-52 w-full items-center justify-center bg-zinc-950 text-xs text-zinc-600 uppercase tracking-widest border-b border-zinc-800">
-                      Cyber Warriors
-                    </div>
-                  )}
+                  </Link>
 
                   <div className="flex flex-1 flex-col p-6">
                     <div className="mb-3 flex items-center justify-between text-xs text-zinc-400">
@@ -135,17 +137,21 @@ export default async function NewsPage({ searchParams }: Props) {
                       </div>
                     </div>
 
-                    <h2 className="text-lg font-bold text-white transition group-hover:text-amber-400 line-clamp-2">
-                      {article.title}
-                    </h2>
+                    {/* Title Clickable Link */}
+                    <Link href={articleHref}>
+                      <h2 className="text-lg font-bold text-white transition group-hover:text-amber-400 line-clamp-2">
+                        {article.title}
+                      </h2>
+                    </Link>
 
                     <p className="mt-3 text-sm text-zinc-400 line-clamp-2 leading-relaxed flex-1">
                       {article.excerpt}
                     </p>
 
                     <div className="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between">
+                      {/* Read More Clickable Link */}
                       <Link
-                        href={`/news/${article.slug}` as Route}
+                        href={articleHref}
                         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400 transition hover:text-amber-300"
                       >
                         READ MORE &rarr;

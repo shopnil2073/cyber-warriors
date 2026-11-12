@@ -5,7 +5,7 @@ import { getNewsBySlug } from "../../lib/newsService";
 import { formatDate } from "../../lib/newsUtils";
 import { supabase } from "../../lib/supabase";
 
-export const revalidate = 60;
+export const revalidate = 0; // Always fetch fresh data for accurate views
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -31,9 +31,10 @@ export default async function NewsArticlePage({ params }: Props) {
   const article = await getNewsBySlug(slug);
   if (!article) notFound();
 
-  // Increment view count when user opens the article
-  // @ts-expect-error views might exist on article
+  // Increment view count on every visit/click
+  // @ts-expect-error views might exist
   const currentViews = (article.views ?? 0) + 1;
+  
   await supabase
     .from("news_articles")
     .update({ views: currentViews })
@@ -41,7 +42,6 @@ export default async function NewsArticlePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Article Header Banner */}
       <section className="relative overflow-hidden border-b border-zinc-800 bg-gradient-to-b from-zinc-900 via-zinc-900/50 to-zinc-950 py-12 px-4">
         <div className="mx-auto max-w-4xl">
           <Link
@@ -77,7 +77,6 @@ export default async function NewsArticlePage({ params }: Props) {
         </div>
       </section>
 
-      {/* Main Content Container */}
       <main className="mx-auto max-w-4xl px-4 py-12">
         <article className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-10 shadow-2xl backdrop-blur-md">
           {article.image_url && (
