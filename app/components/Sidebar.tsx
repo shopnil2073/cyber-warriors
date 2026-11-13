@@ -22,6 +22,7 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
     "samiaakter2073@gmail.com",
     "hmmamun2010@gmail.com",
     "tanjimuddin1437@gmail.com",
+    "mdharunanwer@gmail.com",
     "akasharsenal14@gmail.com",
     "samiulakter2075@gmail.com",
   ];
@@ -44,25 +45,11 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
         return;
       }
 
-      const isHardcodedAdmin = ALLOWED_ADMIN_EMAILS.map((e) =>
+      const isAllowedAdmin = ALLOWED_ADMIN_EMAILS.map((e) =>
         e.toLowerCase().trim()
       ).includes(userEmail);
 
-      let isLocalStorageAdmin = false;
-      try {
-        const grantedAdmins = JSON.parse(
-          localStorage.getItem("cw_admin_emails") || "[]"
-        );
-        isLocalStorageAdmin =
-          Array.isArray(grantedAdmins) &&
-          grantedAdmins.some(
-            (email: string) => email.toLowerCase().trim() === userEmail
-          );
-      } catch (err) {
-        isLocalStorageAdmin = false;
-      }
-
-      setHasCommandCenterAccess(isHardcodedAdmin || isLocalStorageAdmin);
+      setHasCommandCenterAccess(isAllowedAdmin);
     } else {
       setUserName(null);
       setHasCommandCenterAccess(false);
@@ -71,13 +58,11 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
 
   useEffect(() => {
     checkUserAccess();
-
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "cw_admin_emails" || e.key === "cw_active_user") {
+      if (e.key === "cw_active_user") {
         checkUserAccess();
       }
     };
-
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [isOpen, checkUserAccess]);
@@ -271,7 +256,7 @@ export default function Sidebar({ isOpen, onClose, isDark, toggleTheme }: Sideba
                   <div className="w-10 h-10 rounded-lg bg-[#1A2035] border border-[#D4AF37]/30 flex items-center justify-center text-base text-[#D4AF37]">
                     📋
                   </div>
-                  <span className="font-extrabold text-sm md:text-base text-white group-hover:text-[#D4AF37]">Matchday HQ</span>
+                  <span className="font-extrabold text-sm md:text-base text-white group-hover:text-[#D4AF37]">Matchday Management</span>
                 </div>
                 <span className="text-gray-500 group-hover:text-white text-lg">›</span>
               </Link>

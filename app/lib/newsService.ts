@@ -1,7 +1,7 @@
 import { createPublicClient } from "./supabase/server-public";
 import { NEWS_COLUMNS, type NewsArticle } from "./newsUtils";
 
-export async function getPublishedNews(limit = 60): Promise<NewsArticle[]> {
+export async function getPublishedNews(limit = 20): Promise<NewsArticle[]> {
   const { data, error } = await createPublicClient()
     .from("news_articles")
     .select(NEWS_COLUMNS)

@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { getStoredTicker, fetchNewsFromCloud, NewsItem } from "../utils/tournamentStore";
+import { getStoredTicker } from "../utils/tournamentStore";
 import { getAllUsers, UserProfile } from "../utils/userStore";
+import { supabase } from "./lib/supabase";
 
 export default function Home() {
   const taglineText = "Driven by Passion. Defined by Glory.";
@@ -13,15 +14,14 @@ export default function Home() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [rankingTab, setRankingTab] = useState<"OVERALL" | "MONTHLY" | "WEEKLY">("OVERALL");
   const [ticker, setTicker] = useState("🔥 CYBER WARRIORS SOLO CHAMPIONSHIP SEASON 1 FIXTURES ARE NOW LIVE!");
-  const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   // Dynamic Registered Players State
   const [dbPlayers, setDbPlayers] = useState<UserProfile[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState<boolean>(true);
 
-  // Dynamic Cloud News State
-  const [cloudNews, setCloudNews] = useState<NewsItem[]>([]);
+  // Dynamic Cloud News State (Latest 20 published real news)
+  const [cloudNews, setCloudNews] = useState<any[]>([]);
   const [loadingNews, setLoadingNews] = useState<boolean>(true);
 
   // Random 2 Players State for SOLO UPCOMING Section
@@ -33,7 +33,7 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     fetchRegisteredPlayers();
-    loadDynamicNews();
+    loadPublishedNewsFromDatabase();
   }, []);
 
   const fetchRegisteredPlayers = async () => {
@@ -63,28 +63,27 @@ export default function Home() {
     }
   };
 
-  const loadDynamicNews = async () => {
+  const loadPublishedNewsFromDatabase = async () => {
     try {
       setLoadingNews(true);
-      const newsData = await fetchNewsFromCloud();
-      const published = newsData.filter((item) => item.status !== "Draft");
-      setCloudNews(published);
+      const { data, error } = await supabase
+        .from("news_articles")
+        .select("id, title, slug, category, author_name, image_url, published_at, status")
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(20);
+
+      if (!error && data) {
+        setCloudNews(data);
+      }
     } catch (err) {
-      console.error("Error loading cloud news:", err);
+      console.error("Error loading published news:", err);
     } finally {
       setLoadingNews(false);
     }
   };
 
   const isDark = mounted && (theme === "dark" || resolvedTheme === "dark");
-
-  useEffect(() => {
-    if (cloudNews.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrentNewsIndex((prevIndex) => (prevIndex + 1) % cloudNews.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [cloudNews.length]);
 
   useEffect(() => {
     const activeTicker = getStoredTicker();
@@ -196,7 +195,7 @@ export default function Home() {
       {/* Main Content Sections */}
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
 
-        {/* 1. HQ NEWS SECTION */}
+        {/* 1. HQ NEWS AUTO-SLIDESHOW SECTION */}
         <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors overflow-hidden">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-2">
@@ -213,7 +212,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="relative w-full overflow-hidden rounded-2xl">
+          <div className="relative w-full overflow-hidden rounded-2xl group py-2">
             {loadingNews ? (
               <div className="py-12 text-center text-xs font-mono text-[#D4AF37] animate-pulse uppercase">
                 Loading Latest Cloud News...
@@ -223,61 +222,40 @@ export default function Home() {
                 No news articles published yet.
               </div>
             ) : (
-              <>
-                <div
-                  className="flex transition-transform duration-700 ease-in-out gap-4"
-                  style={{
-                    transform: `translateX(-${currentNewsIndex * 260}px)`,
-                  }}
-                >
-                  {cloudNews.map((item) => {
-                    const targetUrl = `/news/${item.slug || item.id}`;
-                    return (
-                      <a
-                        key={item.id}
-                        href={targetUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 w-[240px] md:w-[280px] h-[160px] md:h-[180px] relative rounded-2xl overflow-hidden border-2 border-[var(--border-color)] hover:border-[#D4AF37] group transition-all duration-300 shadow-lg cursor-pointer bg-black/50 block"
-                      >
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-bold bg-slate-900">
-                            CYBER WARRIORS
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-4">
-                          <span className="text-[9px] font-extrabold text-[#D4AF37] uppercase tracking-wider mb-1">
-                            {item.category}
-                          </span>
-                          <h3 className="font-extrabold text-xs md:text-sm text-white group-hover:text-[#D4AF37] transition-colors uppercase tracking-wide leading-snug line-clamp-2">
-                            {item.title}
-                          </h3>
+              <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-4">
+                {[...cloudNews, ...cloudNews].map((item, idx) => {
+                  const targetUrl = `/news/${item.slug}`;
+                  return (
+                    <a
+                      key={`${item.id}-${idx}`}
+                      href={targetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 w-[240px] md:w-[280px] h-[160px] md:h-[180px] relative rounded-2xl overflow-hidden border-2 border-[var(--border-color)] hover:border-[#D4AF37] group/card transition-all duration-300 shadow-lg cursor-pointer bg-black/50 block"
+                    >
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 font-bold bg-slate-900">
+                          CYBER WARRIORS
                         </div>
-                      </a>
-                    );
-                  })}
-                </div>
-
-                <div className="flex justify-center gap-1.5 mt-4">
-                  {cloudNews.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentNewsIndex(idx)}
-                      className={`h-2 rounded-full transition-all ${
-                        currentNewsIndex === idx
-                          ? "bg-[#D4AF37] w-5"
-                          : "bg-gray-600 hover:bg-gray-400 w-2"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-4">
+                        <span className="text-[9px] font-extrabold text-[#D4AF37] uppercase tracking-wider mb-1">
+                          {item.category}
+                        </span>
+                        <h3 className="font-extrabold text-xs md:text-sm text-white group-hover/card:text-[#D4AF37] transition-colors uppercase tracking-wide leading-snug line-clamp-2">
+                          {item.title}
+                        </h3>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             )}
           </div>
         </section>

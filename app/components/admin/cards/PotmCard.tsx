@@ -2,29 +2,106 @@
 
 import React, { useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { removeBackground } from "@imgly/background-removal";
+import { removeBackground } from "../../../lib/bgRemoval";
 
 export default function PotmCard() {
   const cardRef = useRef<HTMLDivElement>(null);
+  const lastFileRef = useRef<File | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [removingBg, setRemovingBg] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
 
   const [playerName, setPlayerName] = useState("");
   const [month, setMonth] = useState("");
   const [playerImage, setPlayerImage] = useState<string>("");
 
-  // IMAGE CONTROLS
+  // IMAGE CONTROLS & TOLERANCE
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [moveStep, setMoveStep] = useState(10); // Default 10px per button click
+  const [moveStep, setMoveStep] = useState(10);
   const [scale, setScale] = useState(1);
   const [borderWidth, setBorderWidth] = useState(4);
-  const [borderColor, setBorderColor] = useState("#FFFFFF"); // Default White Border
+  const [borderColor, setBorderColor] = useState("#FFFFFF");
   const [brightness, setBrightness] = useState(100);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isLocked, setIsLocked] = useState(false);
+  const [tolerance, setTolerance] = useState(45); // Fallback (color based) background removal sensitivity
 
-  // CONVERT BLOB TO BASE64 DATA URL FOR html-to-image SAFETY
+  // FALLBACK: AI kaj na korle ager color-based background cleaner (tolerance diye)
+  const processImageWithTolerance = async (file: File, tol: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          const maxDim = 1000;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const data = imgData.data;
+
+          // Sample background color from corners
+          const corners = [
+            { x: 5, y: 5 },
+            { x: w - 5, y: 5 },
+            { x: 5, y: h - 5 },
+            { x: w - 5, y: h - 5 }
+          ];
+
+          let rSum = 0, gSum = 0, bSum = 0;
+          corners.forEach(c => {
+            const idx = (c.y * w + c.x) * 4;
+            rSum += data[idx];
+            gSum += data[idx + 1];
+            bSum += data[idx + 2];
+          });
+          const bgR = rSum / corners.length;
+          const bgG = gSum / corners.length;
+          const bgB = bSum / corners.length;
+
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+
+            const dist = Math.sqrt(
+              Math.pow(r - bgR, 2) +
+              Math.pow(g - bgG, 2) +
+              Math.pow(b - bgB, 2)
+            );
+
+            if (dist < tol) {
+              data[i + 3] = 0; // Transparent
+            }
+          }
+
+          ctx.putImageData(imgData, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -34,39 +111,41 @@ export default function PotmCard() {
     });
   };
 
-  // FAST AI BACKGROUND REMOVAL PROCESSOR
+  // AI diye auto background remove (prothom option). Fail korle fallback e tolerance method.
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setRemovingBg(true);
-    setIsLocked(false);
+    lastFileRef.current = file;
+    setProcessing(true);
+    setUsedFallback(false);
     setPos({ x: 0, y: 0 });
     setScale(1);
 
     try {
-      // "isnet_fp16" or "isnet_quint8" is the fastest compressed AI model
       const blob = await removeBackground(file, {
         model: "isnet_fp16",
-        output: {
-          format: "image/png",
-          quality: 0.8,
-        },
+        output: { format: "image/png", quality: 0.8 },
       });
-      const base64Data = await blobToBase64(blob);
-      setPlayerImage(base64Data);
+      setPlayerImage(await blobToBase64(blob));
     } catch (err) {
-      console.error("AI BG Removal failed, falling back to original:", err);
-      const reader = new FileReader();
-      reader.onload = () => setPlayerImage(reader.result as string);
-      reader.readAsDataURL(file);
+      console.error("AI BG Removal failed, fallback use hocche:", err);
+      try {
+        const processed = await processImageWithTolerance(file, tolerance);
+        setPlayerImage(processed);
+        setUsedFallback(true);
+      } catch (err2) {
+        console.error("Fallback processing error:", err2);
+        const reader = new FileReader();
+        reader.onload = () => setPlayerImage(reader.result as string);
+        reader.readAsDataURL(file);
+      }
     }
-    setRemovingBg(false);
+    setProcessing(false);
   };
 
-  // DIRECTIONAL BUTTON HANDLERS
   const moveImage = (direction: "up" | "down" | "left" | "right") => {
-    if (isLocked || !playerImage) return;
+    if (!playerImage) return;
     setPos((prev) => {
       switch (direction) {
         case "up":
@@ -80,42 +159,6 @@ export default function PotmCard() {
         default:
           return prev;
       }
-    });
-  };
-
-  // MOUSE & TOUCH DRAG HANDLERS
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isLocked || !playerImage) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || isLocked) return;
-    setPos({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isLocked || !playerImage || e.touches.length === 0) return;
-    setIsDragging(true);
-    setDragStart({
-      x: e.touches[0].clientX - pos.x,
-      y: e.touches[0].clientY - pos.y,
-    });
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || isLocked || e.touches.length === 0) return;
-    setPos({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y,
     });
   };
 
@@ -134,12 +177,11 @@ export default function PotmCard() {
       link.click();
     } catch (err) {
       console.error("Download error", err);
-      alert("Download failed! Doya kore image load o lock confirm korun.");
+      alert("Download failed!");
     }
     setDownloading(false);
   };
 
-  // MULTI-DIRECTIONAL DROP SHADOW WITH DYNAMIC BORDER COLOR
   const getBorderShadowStyle = () => {
     if (borderWidth === 0) return "drop-shadow(0px 15px 25px rgba(0,0,0,0.8))";
     const bw = `${borderWidth}px`;
@@ -154,7 +196,6 @@ export default function PotmCard() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-      {/* INPUT FORM */}
       <div className="bg-[#121624] border border-[#23293A] p-6 rounded-2xl space-y-4 shadow-xl">
         <h3 className="text-xs font-black text-[#D4AF37] uppercase tracking-widest border-b border-[#23293A] pb-2 flex items-center gap-2">
           <span>🌟</span> PLAYER OF THE MONTH INPUTS
@@ -176,7 +217,6 @@ export default function PotmCard() {
             <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">MONTH</label>
             <input
               type="text"
-              placeholder=""
               value={month}
               onChange={(e) => setMonth(e.target.value)}
               className="w-full bg-[#0B0E14] border border-[#23293A] p-3 text-xs rounded-xl text-white font-bold outline-none focus:border-[#D4AF37] transition-all"
@@ -184,28 +224,54 @@ export default function PotmCard() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">PLAYER PHOTO</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1">PLAYER PHOTO (OR TRANSPARENT PNG)</label>
             <input
               type="file"
               accept="image/*"
               onChange={handleImageUpload}
               className="w-full bg-[#0B0E14] border border-[#23293A] p-2 text-xs rounded-xl text-gray-400 file:bg-[#121624] file:border-0 file:text-[#D4AF37] file:font-bold cursor-pointer"
             />
-            {removingBg && (
+            {processing && (
               <p className="text-[10px] text-amber-400 mt-1 font-bold animate-pulse">
-                ⏳ Fast AI is removing background... Please wait.
+                ⏳ AI is removing background... Please wait (prothom bar ektu beshi somoy lage).
               </p>
             )}
           </div>
 
-          {/* CONTROLS FOR IMAGE ADJUSTMENTS & POSITIONING */}
           {playerImage && (
             <div className="border border-[#23293A] bg-[#0B0E14] p-4 rounded-xl space-y-4">
               <span className="text-[10px] font-bold text-[#D4AF37] uppercase block">
                 ⚙️ IMAGE ADJUSTMENTS & POSITION CONTROLS
               </span>
 
-              {/* DIRECTIONAL ARROW BUTTONS */}
+              {/* FALLBACK TOLERANCE SLIDER: shudhu AI fail korle dekhabe */}
+              {usedFallback && (
+                <div>
+                  <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-1">
+                    <span>AUTO BG REMOVAL TOLERANCE (AI fail korse, color method)</span>
+                    <span className="text-[#D4AF37]">{tolerance}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="120"
+                    step="5"
+                    value={tolerance}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setTolerance(val);
+                      if (lastFileRef.current) {
+                        processImageWithTolerance(lastFileRef.current, val)
+                          .then(setPlayerImage)
+                          .catch((err) => console.error(err));
+                      }
+                    }}
+                    className="w-full accent-[#D4AF37] cursor-pointer"
+                  />
+                  <span className="text-[8px] text-gray-500 block mt-0.5">Adjust slider if background isn't fully removed (or use a pre-cut PNG).</span>
+                </div>
+              )}
+
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-[9px] text-gray-400 font-bold uppercase">
@@ -232,34 +298,30 @@ export default function PotmCard() {
                 <div className="flex flex-col items-center gap-1.5 bg-[#121624] p-3 rounded-xl border border-[#23293A]">
                   <button
                     type="button"
-                    disabled={isLocked}
                     onClick={() => moveImage("up")}
-                    className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                    className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors"
                   >
                     ▲
                   </button>
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      disabled={isLocked}
                       onClick={() => moveImage("left")}
-                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors"
                     >
                       ◀
                     </button>
                     <button
                       type="button"
-                      disabled={isLocked}
                       onClick={() => moveImage("down")}
-                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors"
                     >
                       ▼
                     </button>
                     <button
                       type="button"
-                      disabled={isLocked}
                       onClick={() => moveImage("right")}
-                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors disabled:opacity-40"
+                      className="bg-[#23293A] hover:bg-[#D4AF37] hover:text-black text-white p-2 rounded-lg text-xs font-bold w-12 border border-[#323B52] transition-colors"
                     >
                       ▶
                     </button>
@@ -267,7 +329,6 @@ export default function PotmCard() {
                 </div>
               </div>
 
-              {/* BORDER COLOR SELECTOR */}
               <div>
                 <label className="text-[9px] text-gray-400 font-bold block mb-1.5">BORDER COLOR</label>
                 <div className="flex items-center gap-2">
@@ -291,7 +352,6 @@ export default function PotmCard() {
                 </div>
               </div>
 
-              {/* BORDER THICKNESS SLIDER */}
               <div>
                 <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-1">
                   <span>BORDER OUTLINE THICKNESS</span>
@@ -308,7 +368,6 @@ export default function PotmCard() {
                 />
               </div>
 
-              {/* BRIGHTNESS SLIDER */}
               <div>
                 <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-1">
                   <span>BRIGHTNESS</span>
@@ -325,7 +384,6 @@ export default function PotmCard() {
                 />
               </div>
 
-              {/* ZOOM / SCALE SLIDER */}
               <div>
                 <div className="flex justify-between text-[9px] text-gray-400 font-bold mb-1">
                   <span>ZOOM / SCALE</span>
@@ -345,27 +403,17 @@ export default function PotmCard() {
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsLocked(!isLocked)}
-                  className={`w-full text-xs font-bold py-2 rounded-lg transition-all ${
-                    isLocked
-                      ? "bg-green-600 text-white shadow-lg"
-                      : "bg-[#23293A] text-[#D4AF37] border border-[#D4AF37]/40"
-                  }`}
-                >
-                  {isLocked ? "🔒 POSITION & STYLE LOCKED (OK)" : "🔓 LOCK SETTINGS (OK)"}
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     setPos({ x: 0, y: 0 });
                     setScale(1);
                     setBorderWidth(4);
                     setBorderColor("#FFFFFF");
                     setBrightness(100);
+                    setTolerance(45);
                   }}
-                  className="bg-gray-800 text-gray-300 px-3 text-xs font-bold rounded-lg border border-gray-700 hover:bg-gray-700"
+                  className="w-full bg-gray-800 text-gray-300 py-2 text-xs font-bold rounded-lg border border-gray-700 hover:bg-gray-700"
                 >
-                  RESET
+                  RESET POSITION & STYLE
                 </button>
               </div>
             </div>
@@ -374,14 +422,13 @@ export default function PotmCard() {
 
         <button
           onClick={downloadCard}
-          disabled={downloading || removingBg}
+          disabled={downloading || processing}
           className="w-full bg-[#D4AF37] text-black font-extrabold text-xs py-3.5 rounded-xl hover:brightness-110 transition-all uppercase cursor-pointer disabled:opacity-50 mt-4 shadow-lg flex items-center justify-center gap-2"
         >
           <span>📥</span> {downloading ? "GENERATING..." : "DOWNLOAD POTM CARD PNG"}
         </button>
       </div>
 
-      {/* CANVAS PREVIEW */}
       <div className="space-y-2">
         <span className="text-[10px] font-mono text-[#D4AF37] uppercase tracking-widest block">
           POTM TEMPLATE CANVAS PREVIEW (1080x1080):
@@ -390,32 +437,22 @@ export default function PotmCard() {
         <div className="overflow-hidden rounded-2xl border border-[#D4AF37]/40 shadow-2xl bg-black max-w-[500px] mx-auto">
           <div
             ref={cardRef}
-            className="relative w-[500px] h-[500px] select-none overflow-hidden bg-cover bg-center"
+            className="relative w-[500px] h-[500px] select-none overflow-hidden bg-cover bg-center pointer-events-none"
             style={{
               backgroundImage: `url('/potm-bg.jpg')`,
             }}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleMouseUp}
           >
-            {/* DRAGGABLE & SCALABLE CUTOUT IMAGE WITH COLOR OUTLINE & BRIGHTNESS */}
             <div className="absolute left-0 bottom-0 top-0 w-[57%] flex items-end justify-center z-10 overflow-hidden">
               {playerImage ? (
                 <img
                   src={playerImage}
                   alt="Player Cutout"
-                  onMouseDown={handleMouseDown}
-                  onTouchStart={handleTouchStart}
                   draggable={false}
-                  className={`max-h-[92%] w-auto object-contain ${
-                    isLocked ? "cursor-default" : "cursor-grab active:cursor-grabbing"
-                  }`}
+                  className="max-h-[92%] w-auto object-contain cursor-default"
                   style={{
                     filter: `${getBorderShadowStyle()} brightness(${brightness}%)`,
                     transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`,
-                    transition: isDragging ? "none" : "transform 0.1s ease-out, filter 0.1s ease-out",
+                    transition: "transform 0.1s ease-out, filter 0.1s ease-out",
                   }}
                 />
               ) : (
@@ -425,7 +462,6 @@ export default function PotmCard() {
               )}
             </div>
 
-            {/* RIGHT SIDE MONTH & NAME */}
             <div className="absolute right-5 bottom-12 w-[45%] text-right z-20 space-y-1">
               {month && (
                 <div className="text-[#D4AF37] font-black text-lg tracking-widest uppercase drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)]">

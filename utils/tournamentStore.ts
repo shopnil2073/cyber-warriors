@@ -61,36 +61,60 @@ const DEFAULT_STANDINGS: Standing[] = [
 
 export const getStoredFixtures = (): Fixture[] => {
   if (typeof window === "undefined") return DEFAULT_FIXTURES;
-  const saved = localStorage.getItem("cw_fixtures");
-  return saved ? JSON.parse(saved) : DEFAULT_FIXTURES;
+  try {
+    const saved = localStorage.getItem("cw_fixtures");
+    return saved ? JSON.parse(saved) : DEFAULT_FIXTURES;
+  } catch (e) {
+    return DEFAULT_FIXTURES;
+  }
 };
 
 export const saveFixture = (newFixture: Fixture) => {
-  const current = getStoredFixtures();
-  const updated = [newFixture, ...current];
-  localStorage.setItem("cw_fixtures", JSON.stringify(updated));
+  try {
+    const current = getStoredFixtures();
+    const updated = [newFixture, ...current];
+    localStorage.setItem("cw_fixtures", JSON.stringify(updated));
+  } catch (e) {
+    console.error("Save fixture error:", e);
+  }
 };
 
 export const updateFixtureScore = (id: string, p1Score: number, p2Score: number) => {
-  const current = getStoredFixtures();
-  const updated = current.map((f) => (f.id === id ? { ...f, p1Score, p2Score } : f));
-  localStorage.setItem("cw_fixtures", JSON.stringify(updated));
+  try {
+    const current = getStoredFixtures();
+    const updated = current.map((f) => (f.id === id ? { ...f, p1Score, p2Score } : f));
+    localStorage.setItem("cw_fixtures", JSON.stringify(updated));
+  } catch (e) {
+    console.error("Update fixture error:", e);
+  }
 };
 
 export const getStoredStandings = (): Standing[] => {
   if (typeof window === "undefined") return DEFAULT_STANDINGS;
-  const saved = localStorage.getItem("cw_standings");
-  return saved ? JSON.parse(saved) : DEFAULT_STANDINGS;
+  try {
+    const saved = localStorage.getItem("cw_standings");
+    return saved ? JSON.parse(saved) : DEFAULT_STANDINGS;
+  } catch (e) {
+    return DEFAULT_STANDINGS;
+  }
 };
 
 export const saveStandings = (standings: Standing[]) => {
-  localStorage.setItem("cw_standings", JSON.stringify(standings));
+  try {
+    localStorage.setItem("cw_standings", JSON.stringify(standings));
+  } catch (e) {
+    console.error("Save standings error:", e);
+  }
 };
 
 export const updatePlayerInfo = (rank: number, newName: string, pts: number) => {
-  const current = getStoredStandings();
-  const updated = current.map((s) => (s.rank === rank ? { ...s, name: newName, pts } : s));
-  localStorage.setItem("cw_standings", JSON.stringify(updated));
+  try {
+    const current = getStoredStandings();
+    const updated = current.map((s) => (s.rank === rank ? { ...s, name: newName, pts } : s));
+    localStorage.setItem("cw_standings", JSON.stringify(updated));
+  } catch (e) {
+    console.error("Update player info error:", e);
+  }
 };
 
 // --- GLOBAL CLOUD DB CONFIG (JSONBIN / PUBLIC API) ---
@@ -126,14 +150,16 @@ export const fetchNewsFromCloud = async (): Promise<NewsItem[]> => {
       }
     }
   } catch (e) {
-    console.error("Cloud news fetch error:", e);
+    // Fail silently and fallback to local storage to prevent UI crash
   }
   return getStoredNews();
 };
 
 export const saveAllNews = async (newsArray: NewsItem[]): Promise<boolean> => {
   if (typeof window !== "undefined") {
-    localStorage.setItem("cw_news", JSON.stringify(newsArray));
+    try {
+      localStorage.setItem("cw_news", JSON.stringify(newsArray));
+    } catch (e) {}
   }
   try {
     const res = await fetch(GLOBAL_CLOUD_URL, {
@@ -146,7 +172,6 @@ export const saveAllNews = async (newsArray: NewsItem[]): Promise<boolean> => {
     });
     return res.ok;
   } catch (e) {
-    console.error("Cloud news save error:", e);
     return false;
   }
 };
@@ -154,15 +179,23 @@ export const saveAllNews = async (newsArray: NewsItem[]): Promise<boolean> => {
 export const saveNewsToCloud = saveAllNews;
 
 export const saveNews = async (article: NewsItem): Promise<boolean> => {
-  const current = await fetchNewsFromCloud();
-  const updated = [article, ...current.filter((item) => item.id !== article.id)];
-  return await saveAllNews(updated);
+  try {
+    const current = await fetchNewsFromCloud();
+    const updated = [article, ...current.filter((item) => item.id !== article.id)];
+    return await saveAllNews(updated);
+  } catch (e) {
+    return false;
+  }
 };
 
 export const deleteNewsFromCloud = async (id: string): Promise<boolean> => {
-  const current = await fetchNewsFromCloud();
-  const updated = current.filter((item) => item.id !== id);
-  return await saveAllNews(updated);
+  try {
+    const current = await fetchNewsFromCloud();
+    const updated = current.filter((item) => item.id !== id);
+    return await saveAllNews(updated);
+  } catch (e) {
+    return false;
+  }
 };
 
 export const deleteNews = deleteNewsFromCloud;
@@ -170,9 +203,15 @@ export const deleteNews = deleteNewsFromCloud;
 // --- TICKER STORE ---
 export const getStoredTicker = (): string => {
   if (typeof window === "undefined") return "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";
-  return localStorage.getItem("cw_ticker") || "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";
+  try {
+    return localStorage.getItem("cw_ticker") || "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";
+  } catch (e) {
+    return "WELCOME TO CYBER WARRIORS OFFICIAL WEBSITE!";
+  }
 };
 
 export const saveTicker = (text: string) => {
-  localStorage.setItem("cw_ticker", text);
+  try {
+    localStorage.setItem("cw_ticker", text);
+  } catch (e) {}
 };

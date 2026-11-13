@@ -42,6 +42,17 @@ const EMPTY_FORM: FormState = {
   content: "",
 };
 
+const SUPER_ADMIN_EMAIL = "shopnilhossainhim@gmail.com";
+const ALLOWED_ADMIN_EMAILS = [
+  "razibulislamhridoy@gmail.com",
+  "samiaakter2073@gmail.com",
+  "hmmamun2010@gmail.com",
+  "tanjimuddin1437@gmail.com",
+  "mdharunanwer@gmail.com",
+  "akasharsenal14@gmail.com",
+  "samiulakter2075@gmail.com",
+];
+
 const inputCls =
   "w-full rounded-xl border border-zinc-700/50 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20";
 const btnCls =
@@ -53,10 +64,6 @@ export default function NewsPanelPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
 
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -77,49 +84,77 @@ export default function NewsPanelPage() {
     setArticles((data ?? []) as NewsArticle[]);
   }, []);
 
-  const verifyAdmin = useCallback(
+  const checkAdminAccess = useCallback(
     async (s: Session | null) => {
-      if (!s) {
+      let email = s?.user?.email;
+
+      if (!email) {
+        const cachedUser = localStorage.getItem("cw_active_user");
+        if (cachedUser) {
+          try {
+            const parsed = JSON.parse(cachedUser);
+            if (parsed && parsed.email) {
+              email = parsed.email;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (!email) {
         setIsAdmin(false);
         setChecking(false);
         return;
       }
-      const { data } = await supabase
-        .from("news_admins")
-        .select("user_id")
-        .eq("user_id", s.user.id)
-        .maybeSingle();
-      const ok = !!data;
-      setIsAdmin(ok);
-      if (ok) await loadArticles();
+
+      const cleanEmail = email.toLowerCase().trim();
+      const isAllowed =
+        cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase() ||
+        ALLOWED_ADMIN_EMAILS.includes(cleanEmail);
+
+      setIsAdmin(isAllowed);
+
+      if (isAllowed) {
+        await loadArticles();
+      }
       setChecking(false);
     },
     [loadArticles]
   );
 
   useEffect(() => {
+    const cachedUser = localStorage.getItem("cw_active_user");
+    if (cachedUser) {
+      try {
+        const parsed = JSON.parse(cachedUser);
+        if (parsed && parsed.email) {
+          const clean = parsed.email.toLowerCase().trim();
+          if (clean === SUPER_ADMIN_EMAIL.toLowerCase() || ALLOWED_ADMIN_EMAILS.includes(clean)) {
+            setIsAdmin(true);
+            setChecking(false);
+            loadArticles();
+          }
+        }
+      } catch (e) {}
+    }
+
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      void checkAdminAccess(s);
+    });
+
     const { data } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      setTimeout(() => {
-        void verifyAdmin(s);
-      }, 0);
+      void checkAdminAccess(s);
     });
     return () => data.subscription.unsubscribe();
-  }, [verifyAdmin]);
-
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError("");
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthError(error.message);
-    setBusy(false);
-  }
+  }, [checkAdminAccess, loadArticles]);
 
   async function signOut() {
+    localStorage.removeItem("cw_active_user");
     await supabase.auth.signOut();
     setArticles([]);
     setForm(EMPTY_FORM);
+    window.location.href = "/";
   }
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -145,7 +180,6 @@ export default function NewsPanelPage() {
     });
   }
 
-  // Handle multiple image uploads (1st image will be default thumbnail)
   async function uploadImages(files: FileList) {
     const fileArray = Array.from(files);
     for (const file of fileArray) {
@@ -154,7 +188,7 @@ export default function NewsPanelPage() {
         return;
       }
       if (file.size > 3 * 1024 * 1024) {
-        setMsg({ type: "err", text: "Protiটি image 3MB er choto hote hobe." });
+        setMsg({ type: "err", text: "Protiti image 3MB er choto hote hobe." });
         return;
       }
     }
@@ -259,59 +293,10 @@ export default function NewsPanelPage() {
     else await loadArticles();
   }
 
-  if (checking && !session) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-300">
-        <div className="animate-pulse text-lg font-medium">Loading panel...</div>
-      </main>
-    );
-  }
-
-  if (!session) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl backdrop-blur-xl">
-          <div className="mb-6 text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-white">News Panel</h1>
-            <p className="mt-2 text-sm text-zinc-400">Admin email diye secure login koro</p>
-          </div>
-          <form onSubmit={signIn} className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Admin Email</label>
-              <input
-                className={inputCls}
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-zinc-400">Password</label>
-              <input
-                className={inputCls}
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {authError && <p className="text-xs font-medium text-red-400">{authError}</p>}
-            <button type="submit" className={`w-full ${btnPrimaryCls} mt-2`} disabled={busy}>
-              {busy ? "Signing in..." : "Sign In to Panel"}
-            </button>
-          </form>
-        </div>
-      </main>
-    );
-  }
-
   if (checking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-300">
-        <div className="text-sm">Checking admin permissions...</div>
+        <div className="animate-pulse text-lg font-medium">Loading panel...</div>
       </main>
     );
   }
@@ -322,11 +307,11 @@ export default function NewsPanelPage() {
         <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-zinc-900 p-8 text-center shadow-2xl">
           <h1 className="text-2xl font-bold text-red-400">Access Denied</h1>
           <p className="mt-3 text-sm text-zinc-400">
-            <span className="font-semibold text-zinc-200">{session.user.email}</span> ei email-ti news admin list e registered nai.
+            You do not have permission to access the News Panel.
           </p>
-          <button className={`${btnCls} mt-6 w-full`} onClick={signOut}>
-            Sign Out
-          </button>
+          <Link href="/" className={`${btnPrimaryCls} mt-6 block text-center`}>
+            Go to Home
+          </Link>
         </div>
       </main>
     );
@@ -343,7 +328,7 @@ export default function NewsPanelPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs text-zinc-300">
-              {session.user.email}
+              Admin Access Active
             </span>
             <button className={btnCls} onClick={signOut}>
               Sign Out
@@ -468,7 +453,7 @@ export default function NewsPanelPage() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Short Summary (Auto-generated from content)- Eta pic er niche show korbe 
+                Short Summary (Auto-generated from content) - Eta pic er niche show korbe
               </label>
               <button
                 type="button"
@@ -493,7 +478,7 @@ export default function NewsPanelPage() {
             <textarea
               className={inputCls}
               rows={10}
-              placeholder="Write your full news content here... (New lines will automatically feed summary)"
+              placeholder="Write your full news content here..."
               value={form.content}
               onChange={(e) => onContentChange(e.target.value)}
             />
