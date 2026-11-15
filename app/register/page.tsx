@@ -4,7 +4,8 @@ import React, { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registerNewPlayer, UserProfile } from "../../utils/userStore";
+import type { UserProfile } from "../../utils/userStore";
+import { registerPlayerApi, compressAvatar } from "../../utils/authApi";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,13 +26,16 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  // Boro photo choto (480px) kore nei, noile server e request boro hoye registration fail korte pare
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    try {
+      setAvatar(await compressAvatar(file));
+    } catch (err) {
+      console.error("Avatar processing failed:", err);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatar(reader.result as string);
-      };
+      reader.onloadend = () => setAvatar(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -78,14 +82,14 @@ export default function RegisterPage() {
     };
 
     try {
-      const success = await registerNewPlayer(newUser);
+      const result = await registerPlayerApi(newUser);
       setLoading(false);
 
-      if (success) {
+      if (result.ok) {
         alert("Registration successful! Sign In to access your portal.");
         router.push("/sign-in");
       } else {
-        setError("This email address is already registered or server error occurred!");
+        setError(result.error || "Registration failed! Please try again.");
       }
     } catch (err) {
       setLoading(false);

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { loginPlayer } from "../../utils/userStore";
+import { loginPlayerApi } from "../../utils/authApi";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -26,14 +26,14 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      // Async login query to Database
-      const user = await loginPlayer(email.trim(), password.trim());
+      // Server API diye login (password server e check hoy, session cookie set hoy)
+      const result = await loginPlayerApi(email.trim(), password.trim(), rememberMe);
 
-      if (user) {
+      if (result.user) {
         window.dispatchEvent(new Event("cw_auth_change"));
         router.push("/profile");
       } else {
-        setError("Invalid email or password! Please check your credentials.");
+        setError(result.error || "Invalid email or password! Please check your credentials.");
       }
     } catch (err) {
       console.error("Login error:", err);
