@@ -11,6 +11,10 @@ export const ADMIN_EMAILS = [
   "samiulakter2075@gmail.com",
 ];
 
+// AdminConsole.tsx ফাইলের ইমপোর্ট এরর দূর করার জন্য এগুলো যোগ করা হলো:
+export const ALLOWED_ADMIN_EMAILS = ADMIN_EMAILS;
+export const SUPER_ADMIN_EMAIL = ADMIN_EMAILS[0]; // প্রথম ইমেইলটি সুপার অ্যাডমিন হিসেবে সেট করা হলো
+
 export function isCommandCenterEmail(email: string): boolean {
   if (!email) return false;
   return ADMIN_EMAILS.includes(email.trim().toLowerCase());

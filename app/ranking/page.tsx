@@ -1,328 +1,266 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { getAllUsers, UserProfile } from "../../utils/userStore";
+import React, { useEffect, useMemo, useState } from "react";
+import type { Route } from "next";
+import Link from "next/link";
+import { supabase } from "../lib/supabase";
+import { getActiveUser } from "../../utils/userStore";
+import { fetchRankingAll, RATING_FORMULA, type Period, type RankRow } from "../lib/tournament/playerQueries";
+import { CATEGORIES, type CategoryId } from "../lib/tournament/types";
+import { Avatar } from "../components/tournament/ui";
+import "../components/tournament/effects.css";
+import "../components/tournament/effects-extra.css";
 
-interface PlayerRank {
-  id: string;
-  name: string;
-  avatar: string;
-  app: number;
-  w: number;
-  d: number;
-  l: number;
-  gf: number;
-  ga: number;
-  overallRating: number;
-  seasonalRating: number;
-  monthlyRating: number;
-  weeklyRating: number;
-  motm?: number;
+type SortKey = "rating" | "wins" | "goals" | "motm" | "win_rate";
+
+const PERIODS: { id: Period; label: string }[] = [
+  { id: "overall", label: "OVERALL" },
+  { id: "seasonal", label: "SEASONAL" },
+  { id: "monthly", label: "MONTHLY" },
+  { id: "weekly", label: "WEEKLY" },
+];
+
+const SORTS: { id: SortKey; label: string }[] = [
+  { id: "rating", label: "⭐ Rating" },
+  { id: "wins", label: "🏆 Wins" },
+  { id: "goals", label: "⚽ Goals" },
+  { id: "motm", label: "🎖️ MOTM" },
+  { id: "win_rate", label: "📊 Win %" },
+];
+
+function periodLabel(p: Period): string {
+  const now = new Date();
+  const tz = { timeZone: "Asia/Dhaka" } as const;
+  if (p === "monthly") return now.toLocaleDateString("en-GB", { ...tz, month: "long", year: "numeric" });
+  if (p === "weekly") return "This week (Mon – Sun)";
+  if (p === "seasonal") {
+    const month = Number(now.toLocaleDateString("en-GB", { ...tz, month: "numeric" }));
+    const year = now.toLocaleDateString("en-GB", { ...tz, year: "numeric" });
+    return month > 6 ? `Season ${year} (Jul – Dec)` : `Season ${year} (Jan – Jun)`;
+  }
+  return "All time";
 }
 
+const metric = (r: RankRow, k: SortKey) => (k === "win_rate" ? Number(r.win_rate ?? 0) : Number(r[k] ?? 0));
+
 export default function RankingPage() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"OVERALL" | "SEASONAL" | "MONTHLY" | "WEEKLY">("OVERALL");
-  const [selectedSeason, setSelectedSeason] = useState("Season 2026 (Jul - Dec)");
-  const [selectedMonth, setSelectedMonth] = useState("September 2026");
-  const [selectedWeek, setSelectedWeek] = useState("Week 39 (21 Sep - 27 Sep 2026)");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
-  const [players, setPlayers] = useState<PlayerRank[]>([]);
+  const [period, setPeriod] = useState<Period>("overall");
+  const [category, setCategory] = useState<CategoryId | null>(null);
+  const [sort, setSort] = useState<SortKey>("rating");
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<string | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+
+  useEffect(() => setMyId(getActiveUser()?.id ?? null), []);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      try {
-        const allUsers: UserProfile[] = await getAllUsers();
-
-        const formatted: PlayerRank[] = allUsers.map((p: any, idx: number) => {
-          const app = Number(p.matches || p.matches_played || 0);
-          const w = Number(p.wins || p.soloWins || 0);
-          const d = Number(p.draws || 0);
-          const l = Number(p.losses || 0);
-          const gf = Number(p.scored || p.goals_for || 0);
-          const ga = Number(p.conceded || p.goals_against || 0);
-
-          // Ratings based on matches/wins starting from 0 if no match played
-          const overallRating = Number(p.ovrRating || p.rating || (app > 0 ? 1000 + (w * 15) - (l * 10) : 0));
-          const seasonalRating = Number(p.seasonalRating || (app > 0 ? 1000 + (w * 10) : 0));
-          const monthlyRating = Number(p.monthlyRating || (app > 0 ? 500 + (w * 8) : 0));
-          const weeklyRating = Number(p.weeklyRating || (app > 0 ? 100 + (w * 5) : 0));
-
-          return {
-            id: String(p.id || idx + 1),
-            name: p.name || "PLAYER",
-            avatar: p.avatar || "/logo.jpg",
-            app,
-            w,
-            d,
-            l,
-            gf,
-            ga,
-            overallRating,
-            seasonalRating,
-            monthlyRating,
-            weeklyRating,
-            motm: Number(p.motm || 0),
-          };
-        });
-
-        setPlayers(formatted);
-      } catch (e) {
-        console.error("Leaderboard fetch error:", e);
-        setPlayers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeaderboard();
-  }, []);
-
-  // Sort players dynamically based on activeTab rating
-  const getSortedPlayers = () => {
-    return [...players].sort((a, b) => {
-      if (activeTab === "OVERALL") return b.overallRating - a.overallRating;
-      if (activeTab === "SEASONAL") return b.seasonalRating - a.seasonalRating;
-      if (activeTab === "MONTHLY") return b.monthlyRating - a.monthlyRating;
-      return b.weeklyRating - a.weeklyRating;
+    let alive = true;
+    setLoading(true);
+    void fetchRankingAll(supabase, period, category).then((r) => {
+      if (!alive) return;
+      setRows(r);
+      setLoading(false);
     });
-  };
+    return () => { alive = false; };
+  }, [period, category]);
 
-  const filteredPlayers = getSortedPlayers().filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { ranked, fresh } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const match = (r: RankRow) => !q || r.name.toLowerCase().includes(q);
+    const played = rows.filter((r) => r.matches > 0);
+    const sorted = [...played].sort((a, b) => metric(b, sort) - metric(a, sort) || (b.rating ?? 0) - (a.rating ?? 0));
+    return {
+      ranked: sorted.map((r, i) => ({ ...r, shown: sort === "rating" ? (r.rank ?? i + 1) : i + 1 })).filter(match),
+      fresh: rows.filter((r) => r.matches === 0).filter(match),
+    };
+  }, [rows, sort, query]);
 
-  const toggleCard = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedCardId((prev) => (prev === id ? null : id));
-  };
+  const podium = !query ? ranked.slice(0, 3) : [];
+  const rest = !query ? ranked.slice(3) : ranked;
+  const podiumOrder = podium.length === 3 ? [podium[1], podium[0], podium[2]] : podium;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 pb-28 font-sans">
-
-      {/* Header Banner */}
-      <div className="relative w-full py-10 px-4 text-center border-b border-[var(--border-color)] bg-[var(--bg-card)] transition-colors duration-300">
-        <div className="relative z-10 space-y-2">
-          <div className="flex justify-center mb-1">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden border border-[#D4AF37]/50 bg-black">
-              <Image src="/logo.jpg" alt="Club Logo" fill className="object-cover" />
-            </div>
-          </div>
-          <h1 className="text-2xl md:text-4xl font-black tracking-widest text-[#D4AF37] uppercase font-serif">
-            CYBER WARRIORS
+    <div className="min-h-screen bg-[var(--bg-main)] pb-28 text-[var(--text-main)]">
+      {/* HERO */}
+      <section className="cw-grid-bg relative overflow-hidden border-b border-[var(--border-color)]">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 rounded-full bg-[#D4AF37]/15 blur-[100px]" />
+        <div className="relative mx-auto max-w-6xl px-4 py-10 text-center">
+          <span className="cw-fade-up cw-glow inline-block rounded-full border border-[#D4AF37]/40 bg-[var(--bg-card)] px-4 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">
+            Official leaderboard
+          </span>
+          <h1 className="cw-fade-up cw-shine-text mt-3 text-3xl font-black uppercase tracking-tight md:text-5xl" style={{ animationDelay: "80ms" }}>
+            Elite ranking
           </h1>
-          <p className="text-xs md:text-sm tracking-[0.25em] font-extrabold text-[var(--text-muted)] uppercase">
-            OFFICIAL LEADERBOARD
+          <p className="cw-fade-up mt-2 text-xs text-[var(--text-muted)]" style={{ animationDelay: "160ms" }}>
+            Register korle <b className="text-[#D4AF37]">#NEW</b>. Prothom match khelar por-i auto rating ar rank.
           </p>
         </div>
-      </div>
+      </section>
 
-      <div className="max-w-6xl mx-auto px-4 mt-6">
-
-        {/* Navigation Tabs */}
-        <div className="grid grid-cols-4 bg-[var(--bg-card)] p-1.5 rounded-xl border border-[var(--border-color)] mb-6 transition-colors duration-300">
-          {(["OVERALL", "SEASONAL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
+      <div className="mx-auto max-w-6xl space-y-5 px-4 py-6">
+        {/* PERIOD TABS */}
+        <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-1.5">
+          {PERIODS.map((p) => (
             <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setExpandedCardId(null);
-              }}
-              className={`py-2.5 text-xs font-black tracking-wider uppercase rounded-lg transition-all cursor-pointer ${
-                activeTab === tab
-                  ? "bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/20"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-              }`}
+              key={p.id}
+              onClick={() => { setPeriod(p.id); setOpen(null); }}
+              className={`rounded-lg py-2.5 text-[11px] font-black uppercase tracking-wider transition-all ${period === p.id ? "bg-gradient-to-r from-[#AA7C11] via-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/25" : "text-[var(--text-muted)] hover:text-white"}`}
             >
-              {tab}
+              {p.label}
             </button>
           ))}
         </div>
 
-        {/* Title & Filters Row */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-xl">🏆</span>
-            <h2 className="text-sm font-black uppercase tracking-wider text-[var(--text-main)]">
-              {activeTab} RANKINGS
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            {activeTab === "SEASONAL" && (
-              <select
-                value={selectedSeason}
-                onChange={(e) => setSelectedSeason(e.target.value)}
-                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
-              >
-                <option value="Season 2026 (Jul - Dec)">Season 2026 (Jul - Dec)</option>
-                <option value="Season 2026 (Jan - Jun)">Season 2026 (Jan - Jun)</option>
-              </select>
-            )}
-
-            {activeTab === "MONTHLY" && (
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
-              >
-                <option value="September 2026">September 2026</option>
-                <option value="August 2026">August 2026</option>
-              </select>
-            )}
-
-            {activeTab === "WEEKLY" && (
-              <select
-                value={selectedWeek}
-                onChange={(e) => setSelectedWeek(e.target.value)}
-                className="bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-main)] px-3 py-2 rounded-xl focus:border-[#D4AF37] outline-none cursor-pointer"
-              >
-                <option value="Week 39 (21 Sep - 27 Sep 2026)">Week 39 (21 Sep - 27 Sep 2026)</option>
-                <option value="Week 38 (14 Sep - 20 Sep 2026)">Week 38 (14 Sep - 20 Sep 2026)</option>
-              </select>
-            )}
-
-            <div className="relative w-full md:w-56 shrink-0">
-              <input
-                type="text"
-                placeholder="Search player..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] text-xs text-[var(--text-main)] placeholder-[var(--text-muted)] px-3.5 py-2 rounded-xl focus:border-[#D4AF37] outline-none transition-all shadow-inner"
-              />
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">🏆 {periodLabel(period)}</div>
+          <button onClick={() => setShowInfo((s) => !s)} className="text-[11px] font-bold text-[var(--text-muted)] underline-offset-2 hover:text-[#D4AF37] hover:underline">
+            {showInfo ? "Hide" : "How is rating calculated?"}
+          </button>
         </div>
-
-        {/* Leaderboard Cards Grid */}
-        {loading ? (
-          <div className="text-center py-20 text-[#D4AF37] font-black tracking-widest animate-pulse">
-            LOADING RANKINGS...
-          </div>
-        ) : filteredPlayers.length === 0 ? (
-          <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-12 text-center text-[var(--text-muted)] font-bold">
-            NO PLAYERS FOUND
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {filteredPlayers.map((player, index) => {
-              const rankNum = index + 1;
-              const isExpanded = expandedCardId === player.id;
-
-              // Winrate capped at maximum 100%
-              const rawWinRate = player.app > 0 ? Math.round((player.w / player.app) * 100) : 0;
-              const winRate = Math.min(100, Math.max(0, rawWinRate));
-              const gd = player.gf - player.ga;
-
-              const currentPts =
-                activeTab === "OVERALL"
-                  ? player.overallRating
-                  : activeTab === "SEASONAL"
-                  ? player.seasonalRating
-                  : activeTab === "MONTHLY"
-                  ? player.monthlyRating
-                  : player.weeklyRating;
-
-              return (
-                <div
-                  key={player.id}
-                  className={`bg-[var(--bg-card)] border rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm ${
-                    rankNum === 1
-                      ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-                      : "border-[var(--border-color)] hover:border-[#D4AF37]/50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        onClick={() => router.push(`/profile?id=${player.id}`)}
-                        className="relative cursor-pointer hover:scale-105 transition-transform"
-                        title="View Profile"
-                      >
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-[var(--border-color)] hover:border-[#D4AF37] bg-black">
-                          <Image src={player.avatar || "/logo.jpg"} alt={player.name} fill className="object-cover" />
-                        </div>
-                        <span className="absolute -bottom-2 -right-2 bg-[#D4AF37] text-black text-[9px] font-black px-1.5 py-0.5 rounded-md">
-                          #{rankNum}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3
-                          onClick={() => router.push(`/profile?id=${player.id}`)}
-                          className="font-extrabold text-xs md:text-sm text-[var(--text-main)] uppercase hover:text-[#D4AF37] cursor-pointer transition-colors line-clamp-1"
-                          title="View Profile"
-                        >
-                          {player.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="bg-[var(--bg-main)] border border-[var(--border-color)] text-[10px] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold">
-                            👕 {player.app} APP
-                          </span>
-                          <span className="bg-[var(--bg-main)] border border-[var(--border-color)] text-[10px] text-[var(--text-muted)] px-2 py-0.5 rounded-md font-bold">
-                            ✔ {player.w} W
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right pl-2">
-                        <div className="text-lg md:text-xl font-black text-[#D4AF37]">
-                          {currentPts}
-                        </div>
-                        <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase block -mt-1">
-                          {activeTab === "OVERALL" ? "RATING" : "POINTS"}
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={(e) => toggleCard(player.id, e)}
-                        className="w-7 h-7 rounded-lg bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[#D4AF37] flex items-center justify-center text-xs font-bold cursor-pointer"
-                        title="Toggle Stats"
-                      >
-                        {isExpanded ? "▲" : "▼"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                      isExpanded ? "max-h-24 opacity-100 mt-4 pt-3 border-t border-[var(--border-color)]" : "max-h-0 opacity-0"
-                    }`}
-                  >
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
-                        <span className="text-[9px] text-[var(--text-muted)] font-bold block">WIN %</span>
-                        <span className="text-xs font-black text-[#D4AF37]">{winRate}%</span>
-                      </div>
-                      <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
-                        <span className="text-[9px] text-[var(--text-muted)] font-bold block">GF</span>
-                        <span className="text-xs font-black text-[var(--text-main)]">{player.gf}</span>
-                      </div>
-                      <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
-                        <span className="text-[9px] text-[var(--text-muted)] font-bold block">GA</span>
-                        <span className="text-xs font-black text-[var(--text-main)]">{player.ga}</span>
-                      </div>
-                      <div className="bg-[var(--bg-main)] p-2 rounded-xl border border-[var(--border-color)]">
-                        <span className="text-[9px] text-[var(--text-muted)] font-bold block">GD</span>
-                        <span className={`text-xs font-black ${gd >= 0 ? "text-green-500" : "text-red-500"}`}>
-                          {gd > 0 ? `+${gd}` : gd}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        {showInfo && (
+          <div className="cw-fade-up rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-3 text-xs text-[var(--text-muted)]">
+            Rating = <b className="cw-mono text-[#D4AF37]">{RATING_FORMULA}</b>. Admin result publish korlei ranking, stats ar badge auto update hoy.
           </div>
         )}
 
+        {/* CATEGORY + SORT + SEARCH */}
+        <div className="space-y-3">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {[{ id: null, label: "All", icon: "🌐" }, ...CATEGORIES.map((c) => ({ id: c.id as CategoryId | null, label: c.label, icon: c.icon }))].map((c) => (
+              <button
+                key={c.label}
+                onClick={() => setCategory(c.id)}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all ${category === c.id ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]" : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-white"}`}
+              >
+                {c.icon} {c.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+              {SORTS.map((s) => (
+                <button key={s.id} onClick={() => setSort(s.id)} className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-black transition-all ${sort === s.id ? "bg-[#D4AF37] text-black" : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-white"}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="🔍 Search player..."
+              className="w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] px-3.5 py-2 text-xs outline-none transition-all focus:border-[#D4AF37] md:w-60"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="space-y-2 py-4">
+            {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-white/5" style={{ animationDelay: `${i * 100}ms` }} />)}
+          </div>
+        ) : ranked.length === 0 && fresh.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)] p-12 text-center text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">No players found</div>
+        ) : (
+          <>
+            {/* PODIUM */}
+            {podium.length > 0 && (
+              <div className="grid grid-cols-3 items-end gap-2 pt-4 md:gap-4">
+                {podiumOrder.map((p) => {
+                  const pos = p.shown;
+                  const first = pos === 1;
+                  return (
+                    <Link
+                      key={p.player_id}
+                      href={`/profile?id=${p.player_id}` as Route}
+                      className={`cw-card cw-fade-up cw-hud group relative flex flex-col items-center rounded-2xl border bg-gradient-to-b p-3 text-center md:p-5 ${first ? "cw-glow border-[#D4AF37] from-[#D4AF37]/25 to-transparent pb-8 md:pb-10" : "border-[var(--border-color)] from-white/5 to-transparent"}`}
+                      style={{ animationDelay: `${first ? 0 : 150}ms` }}
+                    >
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-2xl">{pos === 1 ? "👑" : pos === 2 ? "🥈" : "🥉"}</span>
+                      <div className="mt-2"><Avatar src={p.avatar} name={p.name} size={first ? 76 : 56} ring={first} /></div>
+                      <h3 className="mt-2 line-clamp-1 text-[11px] font-black uppercase tracking-wide text-[var(--text-main)] group-hover:text-[#D4AF37] md:text-sm">{p.name}</h3>
+                      <div className="cw-mono cw-neon mt-1 text-xl font-black text-[#D4AF37] md:text-3xl">{sort === "rating" ? p.rating : metric(p, sort)}</div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">{SORTS.find((s) => s.id === sort)?.label.replace(/^\S+\s/, "")}</div>
+                      <div className="mt-2 hidden gap-2 text-[10px] font-bold text-[var(--text-muted)] md:flex">
+                        <span>👕 {p.matches}</span><span className="text-emerald-400">✔ {p.wins}</span><span>⚽ {p.goals}</span>
+                      </div>
+                      <span className={`absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[11px] font-black ${first ? "bg-[#D4AF37] text-black" : "bg-[var(--bg-card)] text-[#D4AF37] border border-[#D4AF37]/40"}`}>#{pos}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* LIST */}
+            <div className="grid grid-cols-1 gap-3 pt-4 md:grid-cols-2">
+              {rest.map((p, i) => {
+                const mine = myId === p.player_id;
+                const isOpen = open === p.player_id;
+                const gd = p.goals - p.conceded;
+                return (
+                  <div
+                    key={p.player_id}
+                    className={`cw-fade-up overflow-hidden rounded-2xl border bg-[var(--bg-card)] transition-all duration-300 ${mine ? "border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,.2)]" : "border-[var(--border-color)] hover:border-[#D4AF37]/50"}`}
+                    style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
+                  >
+                    <div className="flex items-center justify-between gap-3 p-3.5">
+                      <Link href={`/profile?id=${p.player_id}` as Route} className="flex min-w-0 items-center gap-3">
+                        <span className={`cw-mono w-8 shrink-0 text-center text-sm font-black ${p.shown <= 10 ? "text-[#D4AF37]" : "text-[var(--text-muted)]"}`}>#{p.shown}</span>
+                        <Avatar src={p.avatar} name={p.name} size={42} ring={mine} />
+                        <div className="min-w-0">
+                          <h3 className="truncate text-xs font-black uppercase tracking-wide text-[var(--text-main)]">
+                            {p.name} {mine && <span className="ml-1 rounded bg-[#D4AF37] px-1.5 py-0.5 text-[9px] text-black">YOU</span>}
+                          </h3>
+                          <div className="cw-mono mt-0.5 flex gap-2 text-[10px] text-[var(--text-muted)]"><span>👕 {p.matches}</span><span>✔ {p.wins}</span><span>⚽ {p.goals}</span></div>
+                        </div>
+                      </Link>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="text-right">
+                          <div className="cw-mono text-lg font-black text-[#D4AF37]">{sort === "rating" ? p.rating : metric(p, sort)}</div>
+                          <div className="text-[9px] font-bold uppercase text-[var(--text-muted)]">{sort === "rating" ? "rating" : sort.replace("_", " ")}</div>
+                        </div>
+                        <button onClick={() => setOpen(isOpen ? null : p.player_id)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] text-xs text-[var(--text-muted)] hover:text-[#D4AF37]" aria-label="Toggle stats">
+                          {isOpen ? "▲" : "▼"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className={`grid grid-cols-4 gap-2 px-3.5 text-center transition-all duration-300 md:grid-cols-6 ${isOpen ? "max-h-40 pb-3.5 pt-1 opacity-100" : "max-h-0 opacity-0"}`}>
+                      {[
+                        ["WIN %", `${p.win_rate ?? 0}%`, "text-[#D4AF37]"],
+                        ["D", p.draws, ""], ["L", p.losses, "text-red-400"],
+                        ["GF", p.goals, ""], ["GA", p.conceded, ""],
+                        ["GD", gd > 0 ? `+${gd}` : gd, gd >= 0 ? "text-emerald-400" : "text-red-400"],
+                      ].map(([k, v, c]) => (
+                        <div key={String(k)} className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-main)] p-2">
+                          <div className="text-[9px] font-bold text-[var(--text-muted)]">{k}</div>
+                          <div className={`cw-mono text-xs font-black ${c || "text-[var(--text-main)]"}`}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* NEW PLAYERS */}
+            {fresh.length > 0 && (
+              <section className="pt-6">
+                <h2 className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  <span className="rounded bg-[#D4AF37]/15 px-2 py-0.5 text-[#D4AF37]">#NEW</span> Waiting for first match ({fresh.length})
+                </h2>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {fresh.map((p) => (
+                    <Link key={p.player_id} href={`/profile?id=${p.player_id}` as Route} className="cw-card flex items-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)] p-2.5">
+                      <Avatar src={p.avatar} name={p.name} size={32} />
+                      <span className="truncate text-[11px] font-bold uppercase text-[var(--text-muted)]">{p.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,63 +5,27 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { getStoredTicker } from "../utils/tournamentStore";
-import { getAllUsers, UserProfile } from "../utils/userStore";
 import { supabase } from "./lib/supabase";
+import HomeLive from "./components/home/HomeLive";
 
 export default function Home() {
   const taglineText = "Driven by Passion. Defined by Glory.";
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [rankingTab, setRankingTab] = useState<"OVERALL" | "MONTHLY" | "WEEKLY">("OVERALL");
   const [ticker, setTicker] = useState("🔥 CYBER WARRIORS SOLO CHAMPIONSHIP SEASON 1 FIXTURES ARE NOW LIVE!");
   const [mounted, setMounted] = useState(false);
-
-  // Dynamic Registered Players State
-  const [dbPlayers, setDbPlayers] = useState<UserProfile[]>([]);
-  const [loadingPlayers, setLoadingPlayers] = useState<boolean>(true);
 
   // Dynamic Cloud News State (Latest 20 published real news)
   const [cloudNews, setCloudNews] = useState<any[]>([]);
   const [loadingNews, setLoadingNews] = useState<boolean>(true);
 
-  // Random 2 Players State for SOLO UPCOMING Section
-  const [soloPlayer1, setSoloPlayer1] = useState<UserProfile | null>(null);
-  const [soloPlayer2, setSoloPlayer2] = useState<UserProfile | null>(null);
 
   const { theme, resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
-    fetchRegisteredPlayers();
     loadPublishedNewsFromDatabase();
   }, []);
-
-  const fetchRegisteredPlayers = async () => {
-    try {
-      setLoadingPlayers(true);
-      const players = await getAllUsers();
-      if (players && Array.isArray(players) && players.length > 0) {
-        setDbPlayers(players);
-
-        if (players.length >= 2) {
-          const randomIndex1 = Math.floor(Math.random() * players.length);
-          let randomIndex2 = Math.floor(Math.random() * players.length);
-          while (randomIndex2 === randomIndex1) {
-            randomIndex2 = Math.floor(Math.random() * players.length);
-          }
-          setSoloPlayer1(players[randomIndex1]);
-          setSoloPlayer2(players[randomIndex2]);
-        } else {
-          setSoloPlayer1(players[0]);
-          setSoloPlayer2(players[0]);
-        }
-      }
-    } catch (err) {
-      console.error("Error loading database players:", err);
-    } finally {
-      setLoadingPlayers(false);
-    }
-  };
 
   const loadPublishedNewsFromDatabase = async () => {
     try {
@@ -110,24 +74,6 @@ export default function Home() {
     const timer = setTimeout(handleTyping, isDeleting ? 40 : 80);
     return () => clearTimeout(timer);
   }, [displayText, isDeleting]);
-
-  const rankedPlayers = [...dbPlayers].sort((a: any, b: any) => {
-    const rateA = Number(a.ovrRating || a.rating || 0);
-    const rateB = Number(b.ovrRating || b.rating || 0);
-    return rateB - rateA;
-  });
-
-  const topScorers = [...dbPlayers].sort((a: any, b: any) => {
-    const goalsA = Number(a.totalGoals || a.goals || a.scored || 0);
-    const goalsB = Number(b.totalGoals || b.goals || b.scored || 0);
-    return goalsB - goalsA;
-  });
-
-  const rank1Player: any = rankedPlayers[0];
-  const otherRankedPlayers: any[] = rankedPlayers.slice(1, 5);
-
-  const topScorer1Player: any = topScorers[0];
-  const otherTopScorers: any[] = topScorers.slice(1, 5);
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-300 selection:bg-[#D4AF37] selection:text-black font-sans">
@@ -260,316 +206,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 2. ELITE RANKING SECTION */}
-        <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">👑</span>
-              <h2 className="text-lg md:text-xl font-black uppercase tracking-wider text-[var(--text-main)]">
-                ELITE RANKING
-              </h2>
-            </div>
-            <Link
-              href="/ranking"
-              className="text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 px-3 py-1 rounded-lg hover:bg-[#D4AF37]/10 transition-colors uppercase"
-            >
-              FULL RANK →
-            </Link>
-          </div>
-
-          <div className="flex gap-2 mb-6 border-b border-[var(--border-color)] pb-3">
-            {(["OVERALL", "MONTHLY", "WEEKLY"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setRankingTab(tab)}
-                className={`text-xs font-extrabold px-3 py-1.5 rounded-lg transition-all ${
-                  rankingTab === tab
-                    ? "bg-[#D4AF37] text-black shadow-md scale-105"
-                    : "text-[var(--text-muted)] hover:text-[#D4AF37]"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {loadingPlayers ? (
-            <div className="py-10 text-center text-xs font-black uppercase text-[#D4AF37] tracking-widest animate-pulse">
-              LOADING REGISTERED DATABASE PLAYERS...
-            </div>
-          ) : rankedPlayers.length === 0 ? (
-            <div className="py-10 text-center text-xs font-bold uppercase text-[var(--text-muted)]">
-              No registered players found in database.
-            </div>
-          ) : (
-            <div>
-              {rank1Player && (
-                <Link
-                  href={`/profile?id=${rank1Player.id}`}
-                  className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 cursor-pointer group block"
-                >
-                  <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative shrink-0">
-                      <span className="absolute -top-3 -left-1 text-xl z-10 animate-bounce">👑</span>
-                      <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md group-hover:scale-105 transition-transform">
-                        <Image
-                          src={rank1Player.avatar || "/logo.jpg"}
-                          alt={rank1Player.name || "Leader"}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black tracking-widest text-[#D4AF37] uppercase">
-                        {rankingTab} LEADER
-                      </span>
-                      <h3 className="text-base md:text-lg font-black uppercase tracking-wide text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">
-                        {rank1Player.name}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="text-right flex items-center justify-between w-full md:w-auto md:block">
-                    <div className="text-2xl font-black text-[#D4AF37] font-mono">
-                      {rank1Player.ovrRating || rank1Player.rating || 1200}{" "}
-                      <span className="text-xs font-bold text-[var(--text-muted)]">RTG</span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {rank1Player && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs font-bold bg-[var(--bg-main)] p-3 rounded-xl border border-[var(--border-color)] mb-6 font-mono">
-                  <div>👕 {rank1Player.matches || 0} APP</div>
-                  <div>✔ {rank1Player.wins || rank1Player.soloWins || 0} W</div>
-                  <div>➖ {rank1Player.draws || 0} D</div>
-                  <div>⚽ {rank1Player.scored || rank1Player.totalGoals || 0} GF</div>
-                  <div className="text-[#D4AF37]">📊 {rank1Player.winRate || 0}% WIN</div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {otherRankedPlayers.map((player, idx) => (
-                  <Link
-                    key={player.id || idx}
-                    href={`/profile?id=${player.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] hover:border-[#D4AF37] hover:translate-x-1 transition-all duration-200 text-xs cursor-pointer group block"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-black text-[#D4AF37] w-4 text-center font-mono">
-                        #{idx + 2}
-                      </span>
-                      <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
-                        <Image
-                          src={player.avatar || "/logo.jpg"}
-                          alt={player.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors uppercase">
-                          {player.name}
-                        </h4>
-                        <div className="text-[10px] text-[var(--text-muted)] flex gap-2 font-mono">
-                          <span>👕 {player.matches || 0} APP</span>
-                          <span>✔ {player.wins || 0} W</span>
-                          <span>⚽ {player.scored || player.totalGoals || 0} GF</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="font-black text-sm text-[#D4AF37] font-mono">
-                      {player.ovrRating || player.rating || 1000}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* 3. TOP SCORERS SECTION */}
-        <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🏆</span>
-              <h2 className="text-lg md:text-xl font-black uppercase tracking-wider text-[var(--text-main)]">
-                TOP SCORERS
-              </h2>
-            </div>
-            <Link
-              href="/ranking"
-              className="text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 px-3 py-1 rounded-lg hover:bg-[#D4AF37]/10 transition-colors uppercase"
-            >
-              ALL SCORERS →
-            </Link>
-          </div>
-
-          {topScorer1Player ? (
-            <div>
-              <Link
-                href={`/profile?id=${topScorer1Player.id}`}
-                className="bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/5 to-transparent border-2 border-[#D4AF37] rounded-xl p-4 mb-4 flex items-center justify-between shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] transition-all duration-300 cursor-pointer group block"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shrink-0 group-hover:scale-105 transition-transform">
-                    <Image
-                      src={topScorer1Player.avatar || "/logo.jpg"}
-                      alt={topScorer1Player.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black tracking-widest text-[#D4AF37] uppercase flex items-center gap-1">
-                      🥇 GOLDEN BOOT
-                    </span>
-                    <h3 className="text-base md:text-lg font-black uppercase tracking-wide text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors">
-                      {topScorer1Player.name}
-                    </h3>
-                    <div className="text-[11px] font-bold text-[var(--text-muted)] flex items-center gap-3 mt-1 font-mono">
-                      <span>👕 {topScorer1Player.matches || 0} APP</span>
-                      <span>
-                        ⚽ {(Number(topScorer1Player.totalGoals || topScorer1Player.scored || 0) / Math.max(1, Number(topScorer1Player.matches || 1))).toFixed(2)} RATIO
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black text-[#D4AF37] font-mono">
-                    {topScorer1Player.totalGoals || topScorer1Player.goals || topScorer1Player.scored || 0}
-                  </div>
-                  <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">
-                    GOALS
-                  </span>
-                </div>
-              </Link>
-
-              <div className="space-y-2">
-                {otherTopScorers.map((scorer, idx) => (
-                  <Link
-                    key={scorer.id || idx}
-                    href={`/profile?id=${scorer.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)] hover:border-[#D4AF37] hover:translate-x-1 transition-all duration-200 text-xs cursor-pointer group block"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-black text-[#D4AF37] w-4 text-center font-mono">
-                        #{idx + 2}
-                      </span>
-                      <div className="relative w-8 h-8 rounded-full bg-black/40 overflow-hidden border border-gray-700 shrink-0 group-hover:border-[#D4AF37] transition-colors">
-                        <Image
-                          src={scorer.avatar || "/logo.jpg"}
-                          alt={scorer.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors uppercase">
-                          {scorer.name}
-                        </h4>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono">
-                          👕 {scorer.matches || 0} APP
-                        </span>
-                      </div>
-                    </div>
-                    <div className="font-black text-sm text-[#D4AF37] font-mono">
-                      {scorer.totalGoals || scorer.goals || scorer.scored || 0}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="py-6 text-center text-xs font-bold text-[var(--text-muted)] uppercase">
-              No top scorers recorded yet.
-            </div>
-          )}
-        </section>
-
-        {/* 4. SOLO UPCOMING SECTION */}
-        <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 md:p-6 shadow-md transition-colors">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">👥</span>
-              <h2 className="text-lg md:text-xl font-black uppercase tracking-wider text-[var(--text-main)]">
-                SOLO UPCOMING
-              </h2>
-            </div>
-            <Link
-              href="/event"
-              className="text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 px-3 py-1 rounded-lg hover:bg-[#D4AF37]/10 transition-colors uppercase"
-            >
-              ALL SOLO →
-            </Link>
-          </div>
-
-          <div className="max-w-md mx-auto bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl p-4 text-center space-y-3 shadow-inner">
-            <div className="flex justify-between items-center text-[10px] font-extrabold uppercase text-[#D4AF37] px-2">
-              <span className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2 py-0.5 rounded-md">
-                SOLO TOURNAMENT
-              </span>
-              <span className="bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-2 py-0.5 rounded-md">
-                ROUND 2
-              </span>
-            </div>
-
-            <div className="text-xs font-bold text-[var(--text-muted)] pt-1 font-mono">
-              📅 02 FEB 2026
-            </div>
-
-            {loadingPlayers ? (
-              <div className="py-4 text-xs font-bold text-[#D4AF37] animate-pulse uppercase">
-                Loading Upcoming Matchup...
-              </div>
-            ) : soloPlayer1 && soloPlayer2 ? (
-              <div className="flex items-center justify-around py-4">
-                <Link
-                  href={`/profile?id=${soloPlayer1.id}`}
-                  className="flex flex-col items-center gap-2 group cursor-pointer"
-                >
-                  <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0 group-hover:scale-105 transition-transform">
-                    <Image
-                      src={soloPlayer1.avatar || "/logo.jpg"}
-                      alt={soloPlayer1.name || "Player 1"}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <span className="font-black text-xs text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors uppercase max-w-[100px] truncate">
-                    {soloPlayer1.name}
-                  </span>
-                </Link>
-
-                <div className="text-base font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30 animate-pulse font-mono">
-                  VS
-                </div>
-
-                <Link
-                  href={`/profile?id=${soloPlayer2.id}`}
-                  className="flex flex-col items-center gap-2 group cursor-pointer"
-                >
-                  <div className="relative w-14 h-14 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-black/40 shadow-md shrink-0 group-hover:scale-105 transition-transform">
-                    <Image
-                      src={soloPlayer2.avatar || "/logo.jpg"}
-                      alt={soloPlayer2.name || "Player 2"}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <span className="font-black text-xs text-[var(--text-main)] group-hover:text-[#D4AF37] transition-colors uppercase max-w-[100px] truncate">
-                    {soloPlayer2.name}
-                  </span>
-                </Link>
-              </div>
-            ) : (
-              <div className="py-4 text-xs text-gray-500 font-bold uppercase">
-                No active registered players for fixture
-              </div>
-            )}
-          </div>
-        </section>
+        {/* LIVE DATA: Elite Ranking, Top Scorers, Upcoming (Supabase) */}
+        <HomeLive />
 
       </div>
     </div>

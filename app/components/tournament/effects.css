@@ -1,0 +1,34 @@
+/* Cyber Warriors: shared animations (tournament, solo, team-up, homepage) */
+@keyframes cwFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes cwGlow { 0%, 100% { box-shadow: 0 0 0 rgba(212,175,55,0); } 50% { box-shadow: 0 0 24px rgba(212,175,55,.45); } }
+@keyframes cwShine { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes cwPulseDot { 0%, 100% { transform: scale(.85); opacity: .65; } 50% { transform: scale(1.3); opacity: 1; } }
+@keyframes cwFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes cwSweep { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
+@keyframes cwDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.cw-fade-up { opacity: 0; animation: cwFadeUp .6s cubic-bezier(.2,.7,.2,1) forwards; }
+.cw-glow { animation: cwGlow 2.8s ease-in-out infinite; }
+.cw-float { animation: cwFloat 4s ease-in-out infinite; }
+.cw-live-dot { animation: cwPulseDot 1.2s ease-in-out infinite; }
+.cw-shine-text {
+  background: linear-gradient(110deg, #AA7C11 20%, #F3E5AB 45%, #D4AF37 55%, #AA7C11 80%);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: cwShine 5s linear infinite;
+}
+.cw-card { transition: transform .35s cubic-bezier(.2,.7,.2,1), border-color .25s, box-shadow .35s; }
+.cw-card:hover { transform: translateY(-4px); border-color: #D4AF37; box-shadow: 0 14px 36px rgba(212,175,55,.14); }
+.cw-sweep { position: relative; overflow: hidden; }
+.cw-sweep::after {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  animation: cwSweep 3.6s ease-in-out infinite;
+}
+.cw-grid-bg { background-image: radial-gradient(#23293A 1px, transparent 1px); background-size: 24px 24px; }
+.cw-score { text-shadow: 0 0 18px rgba(212,175,55,.55); }
+.cw-line-draw { transform-origin: left center; animation: cwDraw .8s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-fade-up { animation: none; opacity: 1; }
+  .cw-glow, .cw-float, .cw-live-dot, .cw-shine-text, .cw-sweep::after, .cw-line-draw { animation: none; }
+}

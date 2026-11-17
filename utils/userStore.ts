@@ -39,183 +39,97 @@ export const EMPTY_USER: UserProfile = {
   role: "player",
 };
 
-// 1. New Player Registration
-export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> => {
+const ACTIVE_USER_KEY = "cw_active_user";
+
+async function post(url: string, body: unknown) {
   try {
-    const { data: existing } = await supabase
-      .from("players")
-      .select("id")
-      .eq("email", newUser.email)
-      .maybeSingle();
-
-    if (existing) {
-      console.error("Email already registered");
-      return false;
-    }
-
-    const { error } = await supabase.from("players").insert([
-      {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        password: newUser.password,
-        avatar: newUser.avatar,
-        konami_id: newUser.konamiId,
-        device: newUser.hardware,
-        location: newUser.location,
-        facebook: newUser.facebook,
-        whatsapp: newUser.whatsapp,
-        rank_badge: newUser.rank,
-        role: newUser.role || "player",
-      },
-    ]);
-
-    if (error) {
-      console.error("Supabase Insert Error:", error.message, error.details);
-      return false;
-    }
-
-    return true;
-  } catch (err) {
-    console.error("Register Error:", err);
-    return false;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(body),
+    });
+    return (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; user?: UserProfile };
+  } catch {
+    return { ok: false, error: "Network error" };
   }
+}
+
+// 1. New Player Registration (server API diye: password hash hoy)
+export const registerNewPlayer = async (newUser: UserProfile): Promise<boolean> => {
+  const json = await post("/api/auth/register", newUser);
+  if (!json.ok) console.error("Register failed:", json.error);
+  return json.ok === true;
 };
 
-// 2. Player Sign In
+// 2. Player Sign In (server API diye: session cookie set hoy)
 export const loginPlayer = async (email: string, pass: string): Promise<UserProfile | null> => {
-  try {
-    const { data: u, error } = await supabase
-      .from("players")
-      .select("*")
-      .eq("email", email)
-      .eq("password", pass)
-      .maybeSingle();
-
-    if (error || !u) {
-      if (error) console.error("Login Query Error:", error.message);
-      return null;
-    }
-
-    const userProfile: UserProfile = {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      rank: u.rank_badge || "#NEW",
-      avatar: u.avatar || "/logo.jpg",
-      konamiId: u.konami_id || "Not Set",
-      hardware: u.device || "Not Set",
-      location: u.location || "Not Set",
-      bloodGroup: u.blood_group || "Not Set",
-      dob: u.dob || "Not Set",
-      status: u.status || "Free Agent",
-      facebook: u.facebook || "",
-      whatsapp: u.whatsapp || "",
-      discord: u.discord || "",
-      cobegId: u.cobeg_id || "",
-      role: u.role || "admin",
-    };
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("cw_active_user", JSON.stringify(userProfile));
-    }
-    return userProfile;
-  } catch (err) {
-    console.error("Login Exception:", err);
-    return null;
+  const json = await post("/api/auth/login", { email, password: pass, remember: true });
+  if (json.ok && json.user) {
+    if (typeof window !== "undefined") localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(json.user));
+    return json.user;
   }
+  return null;
 };
 
 // 3. Get Active User
 export const getActiveUser = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
   try {
-    const data = localStorage.getItem("cw_active_user");
+    const data = localStorage.getItem(ACTIVE_USER_KEY);
     return data ? JSON.parse(data) : null;
   } catch {
     return null;
   }
 };
 
-// 4. Logout User (Added both export names for compatibility)
+// 4. Logout User (cookie ar localStorage dutoi clear)
 export const logoutUser = () => {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("cw_active_user");
+    localStorage.removeItem(ACTIVE_USER_KEY);
+    fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
   }
 };
 export const logoutPlayer = logoutUser;
 
-// 5. Get All Registered Players
+// 5. Get All Registered Players  (players_public view theke: email/password/whatsapp ashe na)
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
-    const { data, error } = await supabase.from("players").select("*");
+    const { data, error } = await supabase.from("players_public").select("*");
     if (!error && data && data.length > 0) {
       return data.map((u) => ({
         id: u.id,
         name: u.name,
-        email: u.email,
+        email: "",
         rank: u.rank_badge || "#NEW",
         avatar: u.avatar || "/logo.jpg",
         konamiId: u.konami_id || "Not Set",
         hardware: u.device || "Not Set",
         location: u.location || "Not Set",
-        bloodGroup: u.blood_group || "Not Set",
-        dob: u.dob || "Not Set",
-        status: u.status || "Free Agent",
+        bloodGroup: "Not Set",
+        dob: "Not Set",
+        status: "Free Agent",
         facebook: u.facebook || "",
-        whatsapp: u.whatsapp || "",
-        discord: u.discord || "",
-        cobegId: u.cobeg_id || "",
-        role: u.role || "player",
+        whatsapp: "",
+        discord: "",
+        cobegId: "",
+        role: "player",
       }));
     }
+    if (error) console.error("Fetch players error:", error.message);
   } catch (err) {
     console.error("Fetch players error:", err);
-  }
-
-  // LocalStorage fallback
-  if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem("cw_registered_users");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
   }
   return [];
 };
 
-// 6. Update Profile Data
+// 6. Update Profile Data (server API: shudhu nijer profile)
 export const updateActiveUserProfile = async (updated: UserProfile): Promise<boolean> => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("cw_active_user", JSON.stringify(updated));
-  }
-  try {
-    const { error } = await supabase
-      .from("players")
-      .update({
-        name: updated.name,
-        avatar: updated.avatar,
-        konami_id: updated.konamiId,
-        device: updated.hardware,
-        location: updated.location,
-        blood_group: updated.bloodGroup,
-        dob: updated.dob,
-        facebook: updated.facebook,
-        whatsapp: updated.whatsapp,
-        discord: updated.discord,
-        cobeg_id: updated.cobegId,
-        role: updated.role,
-      })
-      .eq("email", updated.email);
-
-    if (error) {
-      console.error("Update Profile Error:", error.message);
-      return false;
-    }
+  const json = await post("/api/profile/update", updated);
+  if (json.ok && json.user) {
+    if (typeof window !== "undefined") localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(json.user));
     return true;
-  } catch (err) {
-    console.error("Update Profile Exception:", err);
-    return false;
   }
+  console.error("Update Profile Error:", json.error);
+  return false;
 };
